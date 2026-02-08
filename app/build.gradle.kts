@@ -42,6 +42,11 @@ android {
 }
 
 dependencies {
+    implementation(project(":feature:calendar"))
+    implementation(project(":feature:record"))
+    implementation(project(":feature:montage"))
+    implementation(project(":core:ui"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
