@@ -24,3 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "OneSecondMoments"
 include(":app")
+include(":feature:record")
+include(":feature:calendar")
+include(":feature:montage")
+include(":core:ui")
