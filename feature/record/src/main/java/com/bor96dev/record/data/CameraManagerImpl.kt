@@ -27,9 +27,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import java.text.SimpleDateFormat
 import java.util.Locale
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
 class CameraManagerImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : CameraManager {
