@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -57,4 +59,10 @@ dependencies {
     implementation(libs.camera.video)
     implementation(libs.camera.view)
     implementation(libs.camera.extensions)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.navigation.compose)
+
+    implementation(libs.concurrent)
 }

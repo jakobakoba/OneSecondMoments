@@ -16,7 +16,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.bor96dev.calendar.CalendarScreen
 import com.bor96dev.montage.MontageScreen
-import com.bor96dev.record.RecordScreen
+import com.bor96dev.record.presentation.RecordScreen
 import com.bor96dev.ui.R
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
