@@ -14,6 +14,7 @@ room = "2.8.4"
 kotlinxSerialization = "1.10.0"
 ksp = "2.3.5"
 nav3Core = "1.0.0"
+cameraX = "1.6.0-beta01"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,6 +44,13 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleRuntimeKtx" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 
+#camera
+camera-core = {group = "androidx.camera", name ="camera-core", version.ref = "cameraX"}
+camera-camera = {group ="androidx.camera", name = "camera-camera2", version.ref = "cameraX"}
+camera-lifecycle = {group ="androidx.camera", name = "camera-lifecycle", version.ref = "cameraX"}
+camera-video = {group = "androidx.camera", name = "camera-video", version.ref = "cameraX"}
+camera-view = {group ="androidx.camera", name = "camera-view", version.ref = "cameraX"}
+camera-extensions = {group ="androidx.camera", name ="camera-extensions", version.ref = "cameraX"}
 
 
 [plugins]
