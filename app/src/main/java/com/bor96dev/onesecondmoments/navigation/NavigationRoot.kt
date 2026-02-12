@@ -1,5 +1,8 @@
 package com.bor96dev.onesecondmoments.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -44,20 +47,20 @@ fun NavigationRoot(
             NavigationBar {
                 val currentRoute = backStack.last()
                 NavigationBarItem(
-                    selected = currentRoute is Route.Calendar,
+                    selected = currentRoute is Route.Montage,
                     onClick = {
-                        if (currentRoute !is Route.Calendar) {
+                        if (currentRoute !is Route.Montage) {
                             backStack.clear()
-                            backStack.add(Route.Calendar)
+                            backStack.add(Route.Montage)
                         }
                     },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.calendar),
+                            painter = painterResource(R.drawable.montage),
                             contentDescription = null
                         )
                     },
-                    label = { Text("Calendar") }
+                    label = { Text("Montage") }
                 )
 
                 NavigationBarItem(
@@ -78,20 +81,20 @@ fun NavigationRoot(
                 )
 
                 NavigationBarItem(
-                    selected = currentRoute is Route.Montage,
+                    selected = currentRoute is Route.Calendar,
                     onClick = {
-                        if (currentRoute !is Route.Montage) {
+                        if (currentRoute !is Route.Calendar) {
                             backStack.clear()
-                            backStack.add(Route.Montage)
+                            backStack.add(Route.Calendar)
                         }
                     },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.montage),
+                            painter = painterResource(R.drawable.calendar),
                             contentDescription = null
                         )
                     },
-                    label = { Text("Montage") }
+                    label = { Text("Calendar") }
                 )
             }
         }
@@ -121,7 +124,9 @@ fun NavigationRoot(
 
                     else -> error("Unknown NavKey: $key")
                 }
-            }
+            },
+            transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+            popTransitionSpec = { EnterTransition.None togetherWith ExitTransition.None }
         )
     }
 }
