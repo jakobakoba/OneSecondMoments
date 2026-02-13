@@ -138,6 +138,7 @@ fun NavigationRoot(
 
                             EditScreen(
                                 state = state,
+                                player = editViewModel.player,
                                 onEvent = editViewModel::onEvent
                             )
                         }
