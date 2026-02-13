@@ -10,20 +10,15 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.bor96dev.calendar.CalendarScreen
-import com.bor96dev.edit.presentation.EditScreen
 import com.bor96dev.edit.presentation.EditScreenRoute
-import com.bor96dev.edit.presentation.EditViewModel
 import com.bor96dev.montage.MontageScreen
 import com.bor96dev.record.presentation.RecordScreen
 import com.bor96dev.ui.R
@@ -114,7 +109,7 @@ fun NavigationRoot(
                     is Route.Record -> {
                         NavEntry(key) {
                             RecordScreen(
-                                onVideoRecorded =  {uri ->
+                                onVideoRecorded = { uri ->
                                     backStack.add(Route.Edit(uri.toString()))
                                 }
                             )
@@ -132,10 +127,12 @@ fun NavigationRoot(
                             CalendarScreen()
                         }
                     }
+
                     is Route.Edit -> {
-                        NavEntry(key){
+                        NavEntry(key) {
                             EditScreenRoute(
-                                onBack = {backStack.removeLastOrNull()}
+                                videoUri = key.videoUri,
+                                onBack = { backStack.removeLastOrNull() }
                             )
                         }
                     }

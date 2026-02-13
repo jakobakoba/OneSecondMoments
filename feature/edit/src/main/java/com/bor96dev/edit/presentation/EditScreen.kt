@@ -146,7 +146,7 @@ fun EditScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = { onEvent(EditEvent.TogglePlayPause) },
+                onClick = { onEvent(EditEvent.TogglePlay) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
