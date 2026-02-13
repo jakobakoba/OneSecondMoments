@@ -22,6 +22,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.bor96dev.calendar.CalendarScreen
 import com.bor96dev.edit.presentation.EditScreen
+import com.bor96dev.edit.presentation.EditScreenRoute
 import com.bor96dev.edit.presentation.EditViewModel
 import com.bor96dev.montage.MontageScreen
 import com.bor96dev.record.presentation.RecordScreen
@@ -133,13 +134,8 @@ fun NavigationRoot(
                     }
                     is Route.Edit -> {
                         NavEntry(key){
-                            val editViewModel: EditViewModel = hiltViewModel()
-                            val state by editViewModel.uiState.collectAsStateWithLifecycle()
-
-                            EditScreen(
-                                state = state,
-                                player = editViewModel.player,
-                                onEvent = editViewModel::onEvent
+                            EditScreenRoute(
+                                onBack = {backStack.removeLastOrNull()}
                             )
                         }
                     }
