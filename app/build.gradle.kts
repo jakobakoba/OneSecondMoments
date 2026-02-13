@@ -46,6 +46,7 @@ dependencies {
     implementation(project(":feature:calendar"))
     implementation(project(":feature:record"))
     implementation(project(":feature:montage"))
+    implementation(project(":feature:edit"))
     implementation(project(":core:ui"))
 
     implementation(libs.androidx.core.ktx)
@@ -72,4 +73,5 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.navigation.compose)
 }
