@@ -1,6 +1,7 @@
 package com.bor96dev.edit.presentation
 
 import android.net.Uri
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
@@ -33,6 +34,9 @@ class EditViewModel @AssistedInject constructor(
     val player: Player = playerBuilder.build()
 
     init {
+
+        Log.d("GTA5", "loading video: $videoUri")
+
         player.repeatMode = Player.REPEAT_MODE_OFF
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {

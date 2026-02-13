@@ -11,7 +11,9 @@ import com.bor96dev.edit.presentation.event.EditEvent
 fun EditScreenRoute(
     videoUri: String,
     onBack: () -> Unit,
-    viewModel: EditViewModel = hiltViewModel<EditViewModel, EditViewModel.Factory> {factory ->
+    viewModel: EditViewModel = hiltViewModel<EditViewModel, EditViewModel.Factory>(
+        key = videoUri
+    ) {factory ->
         factory.create(videoUri = videoUri)
     }
 ) {
