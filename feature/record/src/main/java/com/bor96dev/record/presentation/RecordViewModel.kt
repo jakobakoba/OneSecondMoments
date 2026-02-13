@@ -59,6 +59,10 @@ class RecordViewModel @Inject constructor(
                     _uiState.update { it.copy(isRecording = true) }
                 }
              }
+
+            RecordEvent.OnNavigationDone -> {
+                _uiState.update { it.copy(lastRecordedUri = null) }
+            }
         }
     }
 

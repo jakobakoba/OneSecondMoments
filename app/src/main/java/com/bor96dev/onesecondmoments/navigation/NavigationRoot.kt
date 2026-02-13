@@ -10,9 +10,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -38,6 +40,7 @@ fun NavigationRoot(
                     subclass(Route.Record::class, Route.Record.serializer())
                     subclass(Route.Montage::class, Route.Montage.serializer())
                     subclass(Route.Calendar::class, Route.Calendar.serializer())
+                    subclass(Route.Edit::class, Route.Edit.serializer())
                 }
             }
         },
@@ -109,7 +112,11 @@ fun NavigationRoot(
                 when (key) {
                     is Route.Record -> {
                         NavEntry(key) {
-                            RecordScreen()
+                            RecordScreen(
+                                onVideoRecorded =  {uri ->
+                                    backStack.add(Route.Edit(uri.toString()))
+                                }
+                            )
                         }
                     }
 
@@ -127,7 +134,12 @@ fun NavigationRoot(
                     is Route.Edit -> {
                         NavEntry(key){
                             val editViewModel: EditViewModel = hiltViewModel()
-                            EditScreen()
+                            val state by editViewModel.uiState.collectAsStateWithLifecycle()
+
+                            EditScreen(
+                                state = state,
+                                onEvent = editViewModel::onEvent
+                            )
                         }
                     }
 

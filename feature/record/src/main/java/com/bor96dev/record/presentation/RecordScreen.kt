@@ -3,6 +3,7 @@ package com.bor96dev.record.presentation
 import android.Manifest
 import android.R
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
@@ -44,6 +45,7 @@ private val REQUIRED_PERMISSIONS = arrayOf(
 
 @Composable
 fun RecordScreen(
+    onVideoRecorded: (Uri) -> Unit,
     viewModel: RecordViewModel = viewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,6 +73,13 @@ fun RecordScreen(
     LaunchedEffect(state.hasPermissions){
         if(state.hasPermissions){
             viewModel.bindCamera(lifecycleOwner)
+        }
+    }
+
+    LaunchedEffect(state.lastRecordedUri){
+        state.lastRecordedUri?.let {uri ->
+            onVideoRecorded(uri)
+            viewModel.onEvent(RecordEvent.OnNavigationDone)
         }
     }
 
