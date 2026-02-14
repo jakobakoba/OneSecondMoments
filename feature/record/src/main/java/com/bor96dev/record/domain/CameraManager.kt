@@ -12,6 +12,7 @@ interface CameraManager {
     val results: Flow<CameraResult>
     fun startRecording()
     fun stopRecording()
+    fun setTargetRotation(rotation: Int)
 
     suspend fun bindToLifecycle(
         lifecycleOwner: LifecycleOwner,

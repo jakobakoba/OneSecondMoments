@@ -80,6 +80,10 @@ class CameraManagerImpl @Inject constructor(
         currentRecording = null
     }
 
+    override fun setTargetRotation(rotation: Int) {
+        videoCapture.targetRotation = rotation
+    }
+
     override suspend fun bindToLifecycle(
         lifecycleOwner: LifecycleOwner,
         vararg useCases: UseCase
