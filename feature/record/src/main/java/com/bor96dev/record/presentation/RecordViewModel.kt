@@ -59,6 +59,10 @@ class RecordViewModel @Inject constructor(
                     _uiState.update { it.copy(isRecording = true) }
                 }
              }
+            is RecordEvent.OrientationChanged -> {
+                _uiState.update { it.copy(isLandscape = event.isLandscape) }
+                cameraManager.setTargetRotation(event.rotation)
+            }
 
             RecordEvent.OnNavigationDone -> {
                 _uiState.update { it.copy(lastRecordedUri = null) }

@@ -1,9 +1,10 @@
 package com.bor96dev.record.presentation
 
 import android.Manifest
-import android.R
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.view.OrientationEventListener
+import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
@@ -12,9 +13,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -37,6 +41,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bor96dev.record.presentation.event.RecordEvent
+import com.bor96dev.ui.R
 
 private val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
@@ -70,16 +75,36 @@ fun RecordScreen(
         }
     }
 
-    LaunchedEffect(state.hasPermissions){
-        if(state.hasPermissions){
+    LaunchedEffect(state.hasPermissions) {
+        if (state.hasPermissions) {
             viewModel.bindCamera(lifecycleOwner)
         }
     }
 
-    LaunchedEffect(state.lastRecordedUri){
-        state.lastRecordedUri?.let {uri ->
+    LaunchedEffect(state.lastRecordedUri) {
+        state.lastRecordedUri?.let { uri ->
             onVideoRecorded(uri)
             viewModel.onEvent(RecordEvent.OnNavigationDone)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val listener = object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                val rotation = when(orientation){
+                    in 45 .. 134 -> Surface.ROTATION_270
+                    in 135 .. 224 -> Surface.ROTATION_180
+                    in 225 .. 314 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+                val isLandscape = (orientation in 60..120) || (orientation in 240..300)
+                viewModel.onEvent(RecordEvent.OrientationChanged(isLandscape, rotation))
+            }
+        }
+        listener.enable()
+        onDispose {
+            listener.disable()
         }
     }
 
@@ -99,32 +124,46 @@ fun RecordScreen(
             )
         }
 
-        Row(
+        if (!state.isLandscape) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(enabled = false) {},
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.rotate),
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Rotate to Landscape",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
-            Column {
-                Text(
-                    text = "February 5, 2026",
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = "San Francisco, CA",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
-
             Box(
                 modifier = Modifier
                     .size(80.dp)
+                    .align(Alignment.Center)
                     .background(Color.White, CircleShape)
-                    .clickable { viewModel.onEvent(RecordEvent.ToggleRecording) },
+                    .clickable(
+                        enabled = state.isLandscape
+                    ) { viewModel.onEvent(RecordEvent.ToggleRecording) },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -140,6 +179,7 @@ fun RecordScreen(
             Box(
                 modifier = Modifier
                     .size(50.dp)
+                    .align(Alignment.CenterEnd)
                     .background(
                         Color.White.copy(alpha = 0.2f),
                         RoundedCornerShape(12.dp)
@@ -147,7 +187,7 @@ fun RecordScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_menu_gallery),
+                    painter = painterResource(id = R.drawable.gallery),
                     contentDescription = null,
                     tint = Color.White
                 )
