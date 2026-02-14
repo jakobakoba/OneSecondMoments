@@ -1,5 +1,6 @@
 package com.bor96dev.edit.presentation
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,10 +31,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
 
+@OptIn(UnstableApi::class)
 @Composable
 fun EditScreen(
     state: EditState,
@@ -89,6 +92,8 @@ fun EditScreen(
                 factory = { context ->
                     PlayerView(context).apply {
                         useController = false
+                        setKeepContentOnPlayerReset(true)
+                        setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                         this.player = player
                     }
                 },

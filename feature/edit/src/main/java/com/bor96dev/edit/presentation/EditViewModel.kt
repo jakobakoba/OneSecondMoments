@@ -75,7 +75,7 @@ class EditViewModel @UnstableApi
                 player.pause()
 
                 val clipping = player.currentMediaItem?.clippingConfiguration
-                val isClipped = clipping != null && (clipping.startPositionMs != 0L || clipping.endPositionMs != Long.MAX_VALUE)
+                val isClipped = clipping != null && (clipping.startPositionMs != 0L || clipping.endPositionMs != androidx.media3.common.C.TIME_END_OF_SOURCE)
 
                 if (isClipped){
                     _uiState.value.videoUri?.let{ uri ->
