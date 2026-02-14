@@ -75,14 +75,14 @@ fun RecordScreen(
         }
     }
 
-    LaunchedEffect(state.hasPermissions){
-        if(state.hasPermissions){
+    LaunchedEffect(state.hasPermissions) {
+        if (state.hasPermissions) {
             viewModel.bindCamera(lifecycleOwner)
         }
     }
 
-    LaunchedEffect(state.lastRecordedUri){
-        state.lastRecordedUri?.let {uri ->
+    LaunchedEffect(state.lastRecordedUri) {
+        state.lastRecordedUri?.let { uri ->
             onVideoRecorded(uri)
             viewModel.onEvent(RecordEvent.OnNavigationDone)
         }
@@ -90,9 +90,11 @@ fun RecordScreen(
 
     val configuration = LocalConfiguration.current
     LaunchedEffect(configuration.orientation) {
-        viewModel.onEvent(RecordEvent.OrientationChanged(
-            configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        ))
+        viewModel.onEvent(
+            RecordEvent.OrientationChanged(
+                configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            )
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize())
@@ -111,18 +113,18 @@ fun RecordScreen(
             )
         }
 
-        if (!state.isLandscape){
-            Box (
+        if (!state.isLandscape) {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable(enabled = false){},
+                    .clickable(enabled = false) {},
                 contentAlignment = Alignment.Center
-            ){
+            ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon (
+                    Icon(
                         painter = painterResource(id = R.drawable.rotate),
                         contentDescription = null,
                         modifier = Modifier.size(64.dp)
@@ -137,30 +139,16 @@ fun RecordScreen(
             }
         }
 
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
-            Column {
-                Text(
-                    text = "February 5, 2026",
-                    color = Color.White,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = "San Francisco, CA",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
-
             Box(
                 modifier = Modifier
                     .size(80.dp)
+                    .align(Alignment.Center)
                     .background(Color.White, CircleShape)
                     .clickable { viewModel.onEvent(RecordEvent.ToggleRecording) },
                 contentAlignment = Alignment.Center
@@ -178,6 +166,7 @@ fun RecordScreen(
             Box(
                 modifier = Modifier
                     .size(50.dp)
+                    .align(Alignment.CenterEnd)
                     .background(
                         Color.White.copy(alpha = 0.2f),
                         RoundedCornerShape(12.dp)
