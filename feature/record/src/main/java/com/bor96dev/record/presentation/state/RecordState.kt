@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.camera.core.Preview
 
 data class RecordState (
+    val isLandscape: Boolean = false,
     val hasPermissions: Boolean = false,
     val isRecording: Boolean = false,
     val lastRecordedUri: Uri? = null,

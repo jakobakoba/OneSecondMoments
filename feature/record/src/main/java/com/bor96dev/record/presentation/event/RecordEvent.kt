@@ -4,4 +4,5 @@ sealed interface RecordEvent {
     data class PermissionResult(val granted: Boolean): RecordEvent
     object ToggleRecording: RecordEvent
     object OnNavigationDone: RecordEvent
+    data class OrientationChanged(val isLandscape: Boolean) : RecordEvent
 }

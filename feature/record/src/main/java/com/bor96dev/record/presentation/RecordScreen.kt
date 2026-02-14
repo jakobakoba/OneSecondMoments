@@ -89,7 +89,11 @@ fun RecordScreen(
     }
 
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    LaunchedEffect(configuration.orientation) {
+        viewModel.onEvent(RecordEvent.OrientationChanged(
+            configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        ))
+    }
 
     Box(modifier = Modifier.fillMaxSize())
     {
@@ -107,7 +111,7 @@ fun RecordScreen(
             )
         }
 
-        if (!isLandscape){
+        if (!state.isLandscape){
             Box (
                 modifier = Modifier
                     .fillMaxSize()
@@ -130,8 +134,6 @@ fun RecordScreen(
                         fontWeight = FontWeight.Bold
                     )
                 }
-
-
             }
         }
 
