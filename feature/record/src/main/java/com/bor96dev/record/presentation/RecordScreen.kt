@@ -142,7 +142,7 @@ fun RecordScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Rotate to landscape to record",
+                        text = "Rotate to Landscape",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
