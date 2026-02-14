@@ -1,5 +1,8 @@
 package com.bor96dev.onesecondmoments.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -15,6 +18,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.bor96dev.calendar.CalendarScreen
+import com.bor96dev.edit.presentation.EditScreenRoute
 import com.bor96dev.montage.MontageScreen
 import com.bor96dev.record.presentation.RecordScreen
 import com.bor96dev.ui.R
@@ -32,6 +36,7 @@ fun NavigationRoot(
                     subclass(Route.Record::class, Route.Record.serializer())
                     subclass(Route.Montage::class, Route.Montage.serializer())
                     subclass(Route.Calendar::class, Route.Calendar.serializer())
+                    subclass(Route.Edit::class, Route.Edit.serializer())
                 }
             }
         },
@@ -44,20 +49,20 @@ fun NavigationRoot(
             NavigationBar {
                 val currentRoute = backStack.last()
                 NavigationBarItem(
-                    selected = currentRoute is Route.Calendar,
+                    selected = currentRoute is Route.Montage,
                     onClick = {
-                        if (currentRoute !is Route.Calendar) {
+                        if (currentRoute !is Route.Montage) {
                             backStack.clear()
-                            backStack.add(Route.Calendar)
+                            backStack.add(Route.Montage)
                         }
                     },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.calendar),
+                            painter = painterResource(R.drawable.montage),
                             contentDescription = null
                         )
                     },
-                    label = { Text("Calendar") }
+                    label = { Text("Montage") }
                 )
 
                 NavigationBarItem(
@@ -78,20 +83,20 @@ fun NavigationRoot(
                 )
 
                 NavigationBarItem(
-                    selected = currentRoute is Route.Montage,
+                    selected = currentRoute is Route.Calendar,
                     onClick = {
-                        if (currentRoute !is Route.Montage) {
+                        if (currentRoute !is Route.Calendar) {
                             backStack.clear()
-                            backStack.add(Route.Montage)
+                            backStack.add(Route.Calendar)
                         }
                     },
                     icon = {
                         Icon(
-                            painter = painterResource(R.drawable.montage),
+                            painter = painterResource(R.drawable.calendar),
                             contentDescription = null
                         )
                     },
-                    label = { Text("Montage") }
+                    label = { Text("Calendar") }
                 )
             }
         }
@@ -103,7 +108,11 @@ fun NavigationRoot(
                 when (key) {
                     is Route.Record -> {
                         NavEntry(key) {
-                            RecordScreen()
+                            RecordScreen(
+                                onVideoRecorded = { uri ->
+                                    backStack.add(Route.Edit(uri.toString()))
+                                }
+                            )
                         }
                     }
 
@@ -119,9 +128,20 @@ fun NavigationRoot(
                         }
                     }
 
+                    is Route.Edit -> {
+                        NavEntry(key) {
+                            EditScreenRoute(
+                                videoUri = key.videoUri,
+                                onBack = { backStack.removeLastOrNull() }
+                            )
+                        }
+                    }
+
                     else -> error("Unknown NavKey: $key")
                 }
-            }
+            },
+            transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
+            popTransitionSpec = { EnterTransition.None togetherWith ExitTransition.None }
         )
     }
 }

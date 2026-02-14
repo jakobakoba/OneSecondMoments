@@ -1,4 +1,4 @@
-package com.bor96dev.record.data.di
+package com.bor96dev.record.di
 
 import com.bor96dev.record.data.CameraManagerImpl
 import com.bor96dev.record.domain.CameraManager

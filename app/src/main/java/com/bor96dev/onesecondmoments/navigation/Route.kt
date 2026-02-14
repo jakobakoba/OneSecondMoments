@@ -11,4 +11,6 @@ sealed interface Route : NavKey{
     data object Montage: Route, NavKey
     @Serializable
     data object Calendar: Route, NavKey
+    @Serializable
+    data class Edit(val videoUri: String): Route, NavKey
 }
