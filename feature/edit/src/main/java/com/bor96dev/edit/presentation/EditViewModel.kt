@@ -6,7 +6,9 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
 import dagger.assisted.Assisted
@@ -18,7 +20,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 @HiltViewModel(assistedFactory = EditViewModel.Factory::class)
-class EditViewModel @AssistedInject constructor(
+class EditViewModel @UnstableApi
+@AssistedInject constructor(
     @Assisted private val videoUri: String,
     playerBuilder: ExoPlayer.Builder
 ) : ViewModel() {
@@ -38,6 +41,9 @@ class EditViewModel @AssistedInject constructor(
         Log.d("GTA5", "loading video: $videoUri")
 
         player.repeatMode = Player.REPEAT_MODE_OFF
+        if (player is ExoPlayer){
+            player.setSeekParameters(SeekParameters.EXACT)
+        }
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _uiState.update { it.copy(isPlaying = isPlaying) }
@@ -56,40 +62,48 @@ class EditViewModel @AssistedInject constructor(
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
                     _uiState.update { it.copy(videoDurationMs = player.duration) }
-                    updatePlayerClipping(uri, 0L)
                     player.removeListener(this)
                 }
             }
         })
     }
 
-    private fun updatePlayerClipping(uri: Uri, startMs: Long) {
-        val clipping = MediaItem.ClippingConfiguration.Builder()
-            .setStartPositionMs(startMs)
-            .setEndPositionMs(startMs + 1000)
-            .build()
-        val mediaItem = MediaItem.Builder()
-            .setUri(uri)
-            .setClippingConfiguration(clipping)
-            .build()
-        player.setMediaItem(mediaItem)
-        player.prepare()
-    }
-
     fun onEvent(event: EditEvent) {
         when (event) {
             is EditEvent.OnSeekChanged -> {
                 _uiState.update { it.copy(selectedStartMs = event.positionMs) }
-                _uiState.value.videoUri?.let { uri ->
-                    updatePlayerClipping(uri, event.positionMs)
+                player.pause()
+
+                val clipping = player.currentMediaItem?.clippingConfiguration
+                val isClipped = clipping != null && (clipping.startPositionMs != 0L || clipping.endPositionMs != androidx.media3.common.C.TIME_END_OF_SOURCE)
+
+                if (isClipped){
+                    _uiState.value.videoUri?.let{ uri ->
+                        player.setMediaItem(MediaItem.fromUri(uri))
+                        player.prepare()
+                    }
                 }
+                player.seekTo(event.positionMs)
             }
 
             is EditEvent.TogglePlay -> {
-                player.seekTo(0)
+                val uri = _uiState.value.videoUri ?: return
+                val startMs = _uiState.value.selectedStartMs
+
+                val clipping = MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(startMs)
+                    .setEndPositionMs(startMs + 1000)
+                    .build()
+
+                val mediaItem = MediaItem.Builder()
+                    .setUri(uri)
+                    .setClippingConfiguration(clipping)
+                    .build()
+
+                player.setMediaItem(mediaItem)
+                player.prepare()
                 player.play()
             }
-
             else -> Unit
         }
     }
