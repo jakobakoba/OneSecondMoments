@@ -2,8 +2,8 @@ package com.bor96dev.record.presentation
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.net.Uri
+import android.view.OrientationEventListener
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
@@ -12,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,12 +23,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -88,13 +87,18 @@ fun RecordScreen(
         }
     }
 
-    val configuration = LocalConfiguration.current
-    LaunchedEffect(configuration.orientation) {
-        viewModel.onEvent(
-            RecordEvent.OrientationChanged(
-                configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            )
-        )
+    DisposableEffect(Unit) {
+        val listener = object : OrientationEventListener(context) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                val isLandscape = (orientation in 60..120) || (orientation in 240..300)
+                viewModel.onEvent(RecordEvent.OrientationChanged(isLandscape))
+            }
+        }
+        listener.enable()
+        onDispose {
+            listener.disable()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize())
@@ -150,7 +154,9 @@ fun RecordScreen(
                     .size(80.dp)
                     .align(Alignment.Center)
                     .background(Color.White, CircleShape)
-                    .clickable { viewModel.onEvent(RecordEvent.ToggleRecording) },
+                    .clickable(
+                        enabled = state.isLandscape
+                    ) { viewModel.onEvent(RecordEvent.ToggleRecording) },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
