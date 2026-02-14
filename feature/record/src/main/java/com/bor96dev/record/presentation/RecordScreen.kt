@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,10 +93,10 @@ fun RecordScreen(
         val listener = object : OrientationEventListener(context) {
             override fun onOrientationChanged(orientation: Int) {
                 if (orientation == ORIENTATION_UNKNOWN) return
-                val rotation = when(orientation){
-                    in 45 .. 134 -> Surface.ROTATION_270
-                    in 135 .. 224 -> Surface.ROTATION_180
-                    in 225 .. 314 -> Surface.ROTATION_90
+                val rotation = when (orientation) {
+                    in 45..134 -> Surface.ROTATION_270
+                    in 135..224 -> Surface.ROTATION_180
+                    in 225..314 -> Surface.ROTATION_90
                     else -> Surface.ROTATION_0
                 }
                 val isLandscape = (orientation in 60..120) || (orientation in 240..300)
@@ -160,18 +161,24 @@ fun RecordScreen(
                 modifier = Modifier
                     .size(80.dp)
                     .align(Alignment.Center)
-                    .background(Color.White, CircleShape)
+                    .graphicsLayer {
+                        alpha = if (state.isRecording && !state.canStop) 0.5f else 1f
+                    }
+                    .background(
+                        color = if (state.isRecording) Color.Red else Color.White,
+                        shape = CircleShape
+                    )
                     .clickable(
-                        enabled = state.isLandscape
+                        enabled = state.isLandscape && (!state.isRecording || state.canStop)
                     ) { viewModel.onEvent(RecordEvent.ToggleRecording) },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(if (state.isRecording) 40.dp else 60.dp)
+                        .size(if (state.isRecording) 32.dp else 60.dp)
                         .background(
-                            Color.Red,
-                            if (state.isRecording) RoundedCornerShape(8.dp) else CircleShape
+                            color = if (state.isRecording) Color.Black else Color.Red,
+                            shape = if (state.isRecording) RoundedCornerShape(8.dp) else CircleShape
                         )
                 )
             }

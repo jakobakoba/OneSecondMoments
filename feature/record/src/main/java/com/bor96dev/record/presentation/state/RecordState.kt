@@ -9,5 +9,7 @@ data class RecordState (
     val isRecording: Boolean = false,
     val lastRecordedUri: Uri? = null,
     val error: String? = null,
-    val videoPreview: Preview? = null
+    val videoPreview: Preview? = null,
+    val recordingStartTime: Long? = null,
+    val canStop: Boolean = false
 )
