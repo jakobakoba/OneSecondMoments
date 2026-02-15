@@ -38,9 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bor96dev.record.presentation.event.RecordEvent
 import com.bor96dev.ui.R
 
@@ -52,7 +52,7 @@ private val REQUIRED_PERMISSIONS = arrayOf(
 @Composable
 fun RecordScreen(
     onVideoRecorded: (Uri) -> Unit,
-    viewModel: RecordViewModel = viewModel()
+    viewModel: RecordViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -162,14 +162,15 @@ fun RecordScreen(
                     .size(80.dp)
                     .align(Alignment.Center)
                     .graphicsLayer {
-                        alpha = if (state.isRecording && !state.canStop) 0.5f else 1f
+                        alpha =
+                            if (state.isProcessing || (state.isRecording && !state.canStop)) 0.5f else 1f
                     }
                     .background(
                         color = if (state.isRecording) Color.Red else Color.White,
                         shape = CircleShape
                     )
                     .clickable(
-                        enabled = state.isLandscape && (!state.isRecording || state.canStop)
+                        enabled = state.isLandscape && !state.isProcessing && state.lastRecordedUri == null && (!state.isRecording || state.canStop)
                     ) { viewModel.onEvent(RecordEvent.ToggleRecording) },
                 contentAlignment = Alignment.Center
             ) {

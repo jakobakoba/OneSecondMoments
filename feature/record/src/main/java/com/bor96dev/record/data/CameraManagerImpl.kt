@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.bor96dev.record.domain.CameraManager
 import com.bor96dev.record.domain.CameraResult
+import com.bor96dev.record.domain.RecordingStatus
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -41,9 +42,16 @@ class CameraManagerImpl @Inject constructor(
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
     override val results = _results.asSharedFlow()
+    private val _recordingStatus = MutableSharedFlow<RecordingStatus>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    override val recordingStatus = _recordingStatus.asSharedFlow()
 
     @SuppressLint("MissingPermission")
     override fun startRecording() {
+        if (currentRecording != null) return
         val name = "OneSecond-" + SimpleDateFormat(
             "yyyyMMdd-HHmmss",
             Locale.US
@@ -64,6 +72,9 @@ class CameraManagerImpl @Inject constructor(
             .prepareRecording(context, outputOptions)
             .withAudioEnabled()
             .start(ContextCompat.getMainExecutor(context)) { event ->
+                if (event is VideoRecordEvent.Start){
+                    _recordingStatus.tryEmit(RecordingStatus.Started)
+                }
                 if (event is VideoRecordEvent.Finalize) {
                     currentRecording = null
                     if (event.hasError()) {
