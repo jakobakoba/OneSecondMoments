@@ -61,7 +61,7 @@ class EditViewModel @UnstableApi
         Log.d("GTA5", "loading video: $videoUri")
 
         player.repeatMode = Player.REPEAT_MODE_OFF
-        if (player is ExoPlayer){
+        if (player is ExoPlayer) {
             player.setSeekParameters(SeekParameters.EXACT)
         }
         player.addListener(object : Player.Listener {
@@ -89,39 +89,42 @@ class EditViewModel @UnstableApi
     }
 
     @OptIn(UnstableApi::class)
-    private suspend fun trimVideo(inputUri: Uri, startMs: Long, endMs: Long): Uri = suspendCancellableCoroutine { continuation ->
-        val outputFile = File(context.filesDir, "moment_${System.currentTimeMillis()}.mp4")
-        val transformer = Transformer.Builder(context).build()
+    private suspend fun trimVideo(inputUri: Uri, startMs: Long, endMs: Long): Uri =
+        suspendCancellableCoroutine { continuation ->
+            val outputFile = File(context.filesDir, "moment_${System.currentTimeMillis()}.mp4")
 
-        val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
-            .setStartPositionMs(startMs)
-            .setEndPositionMs(endMs)
-            .build()
+            val transformer = Transformer.Builder(context)
+                .build()
 
-        val mediaItem = MediaItem.Builder()
-            .setUri(inputUri)
-            .setClippingConfiguration(clippingConfiguration)
-            .build()
+            val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(startMs)
+                .setEndPositionMs(endMs)
+                .build()
 
-        transformer.addListener(object: Transformer.Listener {
-            override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                continuation.resume(Uri.fromFile(outputFile))
+            val mediaItem = MediaItem.Builder()
+                .setUri(inputUri)
+                .setClippingConfiguration(clippingConfiguration)
+                .build()
+
+            transformer.addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    continuation.resume(Uri.fromFile(outputFile))
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException
+                ) {
+                    continuation.resumeWithException(exportException)
+                }
+            })
+
+            transformer.start(mediaItem, outputFile.absolutePath)
+            continuation.invokeOnCancellation {
+                transformer.cancel()
             }
-
-            override fun onError(
-                composition: Composition,
-                exportResult: ExportResult,
-                exportException: ExportException
-            ) {
-                continuation.resumeWithException(exportException)
-            }
-        })
-
-        transformer.start(mediaItem, outputFile.absolutePath)
-        continuation.invokeOnCancellation {
-            transformer.cancel()
         }
-    }
 
 
     fun onEvent(event: EditEvent) {
@@ -132,8 +135,8 @@ class EditViewModel @UnstableApi
                 val currentMediaItem = player.currentMediaItem
                 val isClipped = currentMediaItem?.clippingConfiguration?.startPositionMs != 0L
 
-                if (isClipped){
-                    _uiState.value.videoUri?.let{ uri ->
+                if (isClipped) {
+                    _uiState.value.videoUri?.let { uri ->
                         player.setMediaItem(MediaItem.fromUri(uri))
                         player.prepare()
                     }
@@ -160,9 +163,10 @@ class EditViewModel @UnstableApi
                 player.prepare()
                 player.play()
             }
+
             is EditEvent.SaveClicked -> {
                 viewModelScope.launch {
-                    _uiState.update {it.copy(isSaving = true)}
+                    _uiState.update { it.copy(isSaving = true) }
                     try {
                         val startMs = _uiState.value.selectedStartMs
                         val inputUri = _uiState.value.videoUri ?: return@launch
@@ -175,13 +179,14 @@ class EditViewModel @UnstableApi
                                 videoUri = outputUri.toString()
                             )
                         )
-                        _uiState.update {it.copy(isSaving = false, saveCompleted = true)}
+                        _uiState.update { it.copy(isSaving = false, saveCompleted = true) }
                     } catch (e: Exception) {
                         Log.e("GTA5", "Save error", e)
-                        _uiState.update{it.copy(isSaving = false, error = "Save failed")}
+                        _uiState.update { it.copy(isSaving = false, error = "Save failed") }
                     }
                 }
             }
+
             else -> Unit
         }
     }

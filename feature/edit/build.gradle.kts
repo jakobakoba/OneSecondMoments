@@ -62,5 +62,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
 
     implementation(libs.media3.transformer)
+    implementation(libs.media3.effect)
+    implementation(libs.media3.common)
+
 
 }
