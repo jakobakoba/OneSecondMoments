@@ -9,5 +9,7 @@ data class EditState(
     val selectedStartMs: Long = 0,
     val dateText: String = "",
     val locationText: String? = null,
+    val isSaving: Boolean = false,
+    val saveCompleted: Boolean = false,
     val error: String? = null
 )

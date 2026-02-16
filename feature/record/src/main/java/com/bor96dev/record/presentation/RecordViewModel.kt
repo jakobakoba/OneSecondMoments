@@ -26,6 +26,7 @@ class RecordViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     private var recordingJob: Job? = null
+    private var recordingStartDate: Long? = null
 
     init {
         val preview = Preview.Builder().build()
@@ -35,9 +36,11 @@ class RecordViewModel @Inject constructor(
             cameraManager.results.collect { result ->
                 when (result) {
                     is CameraResult.VideoSaved -> {
+                        val date = recordingStartDate ?: System.currentTimeMillis()
                         _uiState.update {
                             it.copy(
                                 lastRecordedUri = result.uri,
+                                recordedDate = date,
                                 isProcessing = true
                             )
                         }
@@ -73,6 +76,7 @@ class RecordViewModel @Inject constructor(
                 error = null
             )
         }
+        recordingStartDate = System.currentTimeMillis()
         cameraManager.startRecording()
     }
 
@@ -129,6 +133,7 @@ class RecordViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         lastRecordedUri = null,
+                        recordedDate = null,
                         isProcessing = false,
                         isRecording = false
                     )

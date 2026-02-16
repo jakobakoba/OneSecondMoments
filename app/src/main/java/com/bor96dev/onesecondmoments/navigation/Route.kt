@@ -12,5 +12,5 @@ sealed interface Route : NavKey{
     @Serializable
     data object Calendar: Route, NavKey
     @Serializable
-    data class Edit(val videoUri: String): Route, NavKey
+    data class Edit(val videoUri: String, val date: Long): Route, NavKey
 }

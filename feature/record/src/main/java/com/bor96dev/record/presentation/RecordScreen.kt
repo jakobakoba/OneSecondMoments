@@ -51,7 +51,7 @@ private val REQUIRED_PERMISSIONS = arrayOf(
 
 @Composable
 fun RecordScreen(
-    onVideoRecorded: (Uri) -> Unit,
+    onVideoRecorded: (Uri, Long) -> Unit,
     viewModel: RecordViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -82,9 +82,11 @@ fun RecordScreen(
         }
     }
 
-    LaunchedEffect(state.lastRecordedUri) {
-        state.lastRecordedUri?.let { uri ->
-            onVideoRecorded(uri)
+    LaunchedEffect(state.lastRecordedUri, state.recordedDate) {
+        val uri = state.lastRecordedUri
+        val date = state.recordedDate
+        if (uri != null && date != null) {
+            onVideoRecorded(uri, date)
             viewModel.onEvent(RecordEvent.OnNavigationDone)
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -84,13 +85,18 @@ fun EditScreen(
             )
             Button(
                 onClick = { onEvent(EditEvent.SaveClicked) },
+                enabled = !state.isSaving,
                 shape = RoundedCornerShape(24.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp)
             ) {
-                Text(
-                    text = "Save",
-                    fontWeight = FontWeight.Bold
-                )
+                if(state.isSaving){
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text(
+                        text = "Save",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
