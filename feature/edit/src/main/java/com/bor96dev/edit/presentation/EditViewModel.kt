@@ -18,6 +18,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.time.Instant
+import java.time.ZoneId
 
 @HiltViewModel(assistedFactory = EditViewModel.Factory::class)
 class EditViewModel @UnstableApi
@@ -115,4 +117,10 @@ class EditViewModel @UnstableApi
     }
 }
 
+fun Long.toDateString(): String {
+    return Instant.ofEpochMilli(this)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .toString()
+}
 
