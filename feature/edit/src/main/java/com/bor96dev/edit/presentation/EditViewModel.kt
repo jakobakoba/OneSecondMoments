@@ -23,12 +23,13 @@ import kotlinx.coroutines.flow.update
 class EditViewModel @UnstableApi
 @AssistedInject constructor(
     @Assisted private val videoUri: String,
+    @Assisted private val date: Long,
     playerBuilder: ExoPlayer.Builder
 ) : ViewModel() {
 
     @AssistedFactory
     interface Factory {
-        fun create(videoUri: String): EditViewModel
+        fun create(videoUri: String, date: Long): EditViewModel
     }
 
     private val _uiState = MutableStateFlow(EditState())

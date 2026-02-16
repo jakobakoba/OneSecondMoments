@@ -109,8 +109,8 @@ fun NavigationRoot(
                     is Route.Record -> {
                         NavEntry(key) {
                             RecordScreen(
-                                onVideoRecorded = { uri ->
-                                    backStack.add(Route.Edit(uri.toString()))
+                                onVideoRecorded = { uri, date ->
+                                    backStack.add(Route.Edit(uri.toString(), date))
                                 }
                             )
                         }
@@ -132,6 +132,7 @@ fun NavigationRoot(
                         NavEntry(key) {
                             EditScreenRoute(
                                 videoUri = key.videoUri,
+                                date = key.date,
                                 onBack = { backStack.removeLastOrNull() }
                             )
                         }

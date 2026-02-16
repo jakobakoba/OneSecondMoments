@@ -10,11 +10,12 @@ import com.bor96dev.edit.presentation.event.EditEvent
 @Composable
 fun EditScreenRoute(
     videoUri: String,
+    date: Long,
     onBack: () -> Unit,
     viewModel: EditViewModel = hiltViewModel<EditViewModel, EditViewModel.Factory>(
         key = videoUri
     ) {factory ->
-        factory.create(videoUri = videoUri)
+        factory.create(videoUri = videoUri, date = date)
     }
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
