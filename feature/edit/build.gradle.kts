@@ -37,6 +37,7 @@ android {
 
 dependencies {
     implementation(project(":core:ui"))
+    implementation(project(":core:database"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
@@ -59,5 +60,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    implementation(libs.media3.transformer)
 
 }
