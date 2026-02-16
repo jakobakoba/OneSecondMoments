@@ -72,10 +72,9 @@ class EditViewModel @UnstableApi
         when (event) {
             is EditEvent.OnSeekChanged -> {
                 _uiState.update { it.copy(selectedStartMs = event.positionMs) }
-                player.pause()
 
-                val clipping = player.currentMediaItem?.clippingConfiguration
-                val isClipped = clipping != null && (clipping.startPositionMs != 0L || clipping.endPositionMs != androidx.media3.common.C.TIME_END_OF_SOURCE)
+                val currentMediaItem = player.currentMediaItem
+                val isClipped = currentMediaItem?.clippingConfiguration?.startPositionMs != 0L
 
                 if (isClipped){
                     _uiState.value.videoUri?.let{ uri ->
@@ -83,6 +82,7 @@ class EditViewModel @UnstableApi
                         player.prepare()
                     }
                 }
+                player.pause()
                 player.seekTo(event.positionMs)
             }
 

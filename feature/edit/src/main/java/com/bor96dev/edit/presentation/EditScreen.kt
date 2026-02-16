@@ -1,16 +1,21 @@
 package com.bor96dev.edit.presentation
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,12 +26,17 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -35,6 +45,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
+import kotlin.math.roundToInt
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -43,6 +54,9 @@ fun EditScreen(
     player: Player?,
     onEvent: (EditEvent) -> Unit
 ) {
+    val currentOnEvent by rememberUpdatedState(onEvent)
+    val currentSelectedStartMs by rememberUpdatedState(state.selectedStartMs)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -141,12 +155,46 @@ fun EditScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Slider(
-                value = state.selectedStartMs.toFloat(),
-                onValueChange = { onEvent(EditEvent.OnSeekChanged(it.toLong())) },
-                valueRange = 0f..maxOf(0f, (state.videoDurationMs - 1000).toFloat()),
-                modifier = Modifier.fillMaxWidth()
-            )
+            val rangeWidth = 1000f
+            val maxStart = maxOf(0f, (state.videoDurationMs - rangeWidth))
+
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(horizontal = 8.dp)
+            ) {
+                val widthPx = constraints.maxWidth.toFloat()
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                )
+
+                if (state.videoDurationMs > 0) {
+                    val thumbWidth = (rangeWidth / state.videoDurationMs.toFloat()) * widthPx
+                    val thumbOffset =
+                        (currentSelectedStartMs.toFloat() / state.videoDurationMs.toFloat()) * widthPx
+
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(thumbOffset.roundToInt(), 0) }
+                            .width(with(LocalDensity.current) { thumbWidth.toDp() })
+                            .fillMaxHeight()
+                            .background(Color.Yellow, RoundedCornerShape(4.dp))
+                            .pointerInput(state.videoDurationMs) {
+                                detectDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    val deltaMs = (dragAmount.x / widthPx) * state.videoDurationMs
+                                    val newStart =
+                                        (currentSelectedStartMs + deltaMs).coerceIn(0f, maxStart)
+                                    currentOnEvent(EditEvent.OnSeekChanged(newStart.toLong()))
+                                }
+                            }
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
