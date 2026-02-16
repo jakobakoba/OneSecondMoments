@@ -1,4 +1,4 @@
-package com.bor96dev.calendar
+package com.bor96dev.calendar.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

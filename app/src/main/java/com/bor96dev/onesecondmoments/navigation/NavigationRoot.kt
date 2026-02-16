@@ -17,7 +17,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
-import com.bor96dev.calendar.CalendarScreen
+import com.bor96dev.calendar.presentation.CalendarScreen
 import com.bor96dev.edit.presentation.EditScreenRoute
 import com.bor96dev.montage.MontageScreen
 import com.bor96dev.record.presentation.RecordScreen
