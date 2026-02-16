@@ -62,4 +62,7 @@ dependencies {
 
     implementation(libs.icons)
 
+    implementation(libs.exoplayer)
+    implementation(libs.exoplayer.ui)
+
 }
