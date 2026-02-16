@@ -10,15 +10,14 @@ class CalendarRepositoryImpl @Inject constructor(
     private val momentsDao: MomentsDao
 ): CalendarRepository {
     override fun getMomentsForMonth(monthQuery: String): Flow<List<MomentEntity>> {
-        TODO("Not yet implemented")
+        return momentsDao.getMomentsForMonth(monthQuery)
     }
 
     override suspend fun getMomentByDate(date: String): MomentEntity? {
-        TODO("Not yet implemented")
+        return momentsDao.getMomentByDate(date)
     }
 
     override suspend fun deleteMoment(moment: MomentEntity) {
-        TODO("Not yet implemented")
+        momentsDao.deleteMoment(moment)
     }
-
 }
