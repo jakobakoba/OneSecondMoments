@@ -42,6 +42,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 #room
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = {group = "androidx.room", name = "room-ktx", version.ref = "room"}
 
 #navigation3
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
