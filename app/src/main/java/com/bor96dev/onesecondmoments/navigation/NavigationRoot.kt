@@ -124,7 +124,14 @@ fun NavigationRoot(
 
                     is Route.Calendar -> {
                         NavEntry(key) {
-                            CalendarScreen()
+                            CalendarScreen(
+                                onNavigateToRecord = {
+                                    backStack.add(Route.Record)
+                                },
+                                onNavigateToEdit = {uri, date ->
+                                    backStack.add(Route.Edit(uri.toString(), date))
+                                }
+                            )
                         }
                     }
 
