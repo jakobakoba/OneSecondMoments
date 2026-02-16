@@ -65,6 +65,14 @@ fun RecordScreen(
         viewModel.onEvent(RecordEvent.PermissionResult(granted = allGranted))
     }
 
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            onVideoRecorded(it, System.currentTimeMillis())
+        }
+    }
+
     LaunchedEffect(Unit) {
         val needsPermissions = REQUIRED_PERMISSIONS.filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
@@ -193,7 +201,10 @@ fun RecordScreen(
                     .background(
                         Color.White.copy(alpha = 0.2f),
                         RoundedCornerShape(12.dp)
-                    ),
+                    )
+                    .clickable {
+                        galleryLauncher.launch("video/*")
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
