@@ -1,4 +1,4 @@
-package com.bor96dev.edit.di
+package com.bor96dev.media.di
 
 import android.content.Context
 import androidx.media3.exoplayer.ExoPlayer

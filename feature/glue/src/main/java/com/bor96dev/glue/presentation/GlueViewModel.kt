@@ -19,6 +19,6 @@ class GlueViewModel @UnstableApi
 ) : ViewModel() {
     @AssistedFactory
     interface Factory {
-        fun create(monthQuery: String, year: Int): GlueViewModel
+        fun create(monthQuery: String?, year: Int?): GlueViewModel
     }
 }
