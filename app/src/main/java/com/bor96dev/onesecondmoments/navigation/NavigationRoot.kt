@@ -19,6 +19,7 @@ import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.bor96dev.calendar.presentation.CalendarScreen
 import com.bor96dev.edit.presentation.EditScreenRoute
+import com.bor96dev.glue.presentation.GlueScreen
 import com.bor96dev.montage.MontageScreen
 import com.bor96dev.record.presentation.RecordScreen
 import com.bor96dev.ui.R
@@ -37,6 +38,7 @@ fun NavigationRoot(
                     subclass(Route.Montage::class, Route.Montage.serializer())
                     subclass(Route.Calendar::class, Route.Calendar.serializer())
                     subclass(Route.Edit::class, Route.Edit.serializer())
+                    subclass(Route.Glue::class, Route.Glue.serializer())
                 }
             }
         },
@@ -118,7 +120,11 @@ fun NavigationRoot(
 
                     is Route.Montage -> {
                         NavEntry(key) {
-                            MontageScreen()
+                            MontageScreen(
+                                onNavigateToGlue = { month, year ->
+                                    backStack.add(Route.Glue(monthQuery = month, year = year))
+                                }
+                            )
                         }
                     }
 
@@ -142,6 +148,11 @@ fun NavigationRoot(
                                 date = key.date,
                                 onBack = { backStack.removeLastOrNull() }
                             )
+                        }
+                    }
+                    is Route.Glue -> {
+                        NavEntry(key) {
+                            GlueScreen()
                         }
                     }
 
