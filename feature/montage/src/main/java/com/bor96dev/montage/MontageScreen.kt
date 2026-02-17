@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bor96dev.montage.presentation.composables.StatCard
 import com.bor96dev.montage.presentation.event.MontageEvent
 
 @Composable
@@ -87,6 +90,39 @@ fun MontageScreen(
                     color = if (!state.isMonthly) Color.Black else Color.Gray,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = if (state.isMonthly) "Select Month" else "Select Year",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (state.isMonthly){
+                items(state.monthlyStats){stat ->
+                    StatCard(
+                        title = "${stat.yearMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${stat.yearMonth.year}",
+                        subtitle = "${stat.daysRecorded} days recorded",
+                        onClick = {viewModel.onEvent(MontageEvent.ExportMonth(stat.yearMonth))}
+                    )
+                }
+            } else {
+                items(state.yearlyStats){stat ->
+                    StatCard(
+                        title = stat.year.toString(),
+                        subtitle = "${stat.daysRecorded} days recorded",
+                        onClick = {viewModel.onEvent(MontageEvent.ExportYear(stat.year))}
+                    )
+                }
             }
         }
     }
