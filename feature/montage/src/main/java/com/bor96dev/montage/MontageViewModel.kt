@@ -3,6 +3,7 @@ package com.bor96dev.montage
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bor96dev.montage.domain.MontageRepository
+import com.bor96dev.montage.presentation.event.MontageEvent
 import com.bor96dev.montage.presentation.state.MontageState
 import com.bor96dev.montage.presentation.state.MonthStat
 import com.bor96dev.montage.presentation.state.YearStat
@@ -48,6 +49,24 @@ class MontageViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    fun onEvent(event: MontageEvent){
+        when(event){
+            is MontageEvent.TogglePeriod -> {
+                _uiState.update{it.copy(isMonthly = !it.isMonthly)}
+            }
+            is MontageEvent.OnMusicToggled -> {
+                _uiState.update{it.copy(isMusicEnabled = event.enabled)}
+            }
+            is MontageEvent.OnMusicVolumeChanged -> {
+                _uiState.update{it.copy(musicVolume = event.volume)}
+            }
+            is MontageEvent.OnVideoVolumeChanged -> {
+                _uiState.update{it.copy(videoVolume = event.volume)}
+            }
+            else -> {}
         }
     }
 }
