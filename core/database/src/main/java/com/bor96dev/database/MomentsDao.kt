@@ -14,8 +14,14 @@ interface MomentsDao {
     @Query("SELECT * FROM moments WHERE date == :date")
     suspend fun getMomentByDate(date: String): MomentEntity?
 
+    @Query("SELECT * FROM moments ORDER BY date ASC")
+    fun getAllMoments(): Flow<List<MomentEntity>>
+
     @Query("SELECT * FROM moments WHERE date LIKE :monthQuery || '-%' ORDER BY date ASC")
     fun getMomentsForMonth(monthQuery: String): Flow<List<MomentEntity>>
+
+    @Query("SELECT * FROM moments WHERE date LIKE :yearQuery || '-%' ORDER BY date ASC")
+    fun getMomentsForYear(yearQuery: String): Flow<List<MomentEntity>>
 
     @Delete
     suspend fun deleteMoment(moment: MomentEntity)
