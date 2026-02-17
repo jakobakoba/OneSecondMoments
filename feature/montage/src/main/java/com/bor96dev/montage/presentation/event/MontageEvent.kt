@@ -4,9 +4,7 @@ import java.time.YearMonth
 
 sealed interface MontageEvent {
     object TogglePeriod: MontageEvent
-    data class OnMusicToggled(val enabled: Boolean) : MontageEvent
-    data class OnMusicVolumeChanged(val volume: Float): MontageEvent
-    data class OnVideoVolumeChanged(val volume: Float): MontageEvent
-    data class ExportYear(val year: Int): MontageEvent
-    data class ExportMonth(val yearMonth: YearMonth): MontageEvent
+    data class NavigateToGlueYear(val year: Int): MontageEvent
+    data class NavigateToGlueMonth(val yearMonth: YearMonth): MontageEvent
+    object OnNavigationDone: MontageEvent
 }

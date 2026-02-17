@@ -112,7 +112,7 @@ fun MontageScreen(
                     StatCard(
                         title = "${stat.yearMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${stat.yearMonth.year}",
                         subtitle = "${stat.daysRecorded} days recorded",
-                        onClick = {viewModel.onEvent(MontageEvent.ExportMonth(stat.yearMonth))}
+                        onClick = {viewModel.onEvent(MontageEvent.NavigateToGlueMonth(stat.yearMonth))}
                     )
                 }
             } else {
@@ -120,7 +120,7 @@ fun MontageScreen(
                     StatCard(
                         title = stat.year.toString(),
                         subtitle = "${stat.daysRecorded} days recorded",
-                        onClick = {viewModel.onEvent(MontageEvent.ExportYear(stat.year))}
+                        onClick = {viewModel.onEvent(MontageEvent.NavigateToGlueYear(stat.year))}
                     )
                 }
             }
