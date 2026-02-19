@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
+import com.bor96dev.glue.presentation.composables.VolumeControls
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.GlueState
 
@@ -114,5 +115,13 @@ fun GlueScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        VolumeControls(
+            videoVolume = state.videoVolume,
+            musicVolume = state.musicVolume,
+            onVideoVolumeChange = {onEvent(GlueEvent.OnVideoVolumeChanged(it))},
+            onMusicVolumeChange = {onEvent(GlueEvent.OnMusicVolumeChanged(it))}
+        )
     }
 }
