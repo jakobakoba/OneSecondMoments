@@ -9,9 +9,12 @@ data class GlueState (
     val videoMoments: List<MomentEntity> = emptyList(),
     val audioTracks: List<AudioTrack> = emptyList(),
     val totalDurationMs: Long = 0L,
+    val currentTimeMs: Long = 0L,
+    val isPlaying: Boolean = false,
     val isExporting : Boolean = false,
     val videoVolume: Float = 0.7f,
-    val musicVolume: Float = 1.0f
+    val musicVolume: Float = 1.0f,
+    val error: String? = null
     )
 
 data class AudioTrack (
