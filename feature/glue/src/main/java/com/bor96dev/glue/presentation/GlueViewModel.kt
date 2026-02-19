@@ -33,6 +33,8 @@ class GlueViewModel @UnstableApi
         repeatMode = Player.REPEAT_MODE_OFF
     }
 
+
+
     init {
         loadMoments()
     }

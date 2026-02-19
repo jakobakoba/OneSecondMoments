@@ -23,5 +23,6 @@ data class AudioTrack (
     val name: String,
     val startInTimelineMs: Long = 0,
     val endInTimelineMs: Long = 0,
+    val trimStartMs: Long = 0,
     val volume: Float = 1.0f
 )

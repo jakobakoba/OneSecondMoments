@@ -1,5 +1,8 @@
 package com.bor96dev.glue.presentation
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,10 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -26,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,6 +47,7 @@ import com.bor96dev.glue.presentation.composables.Timeline
 import com.bor96dev.glue.presentation.composables.VolumeControls
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.GlueState
+import com.google.common.math.LinearTransformation.vertical
 
 @Composable
 fun GlueScreen(
@@ -45,10 +56,18 @@ fun GlueScreen(
     onEvent: (GlueEvent) -> Unit,
     onBack: () -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let{onEvent(GlueEvent.OnAudioAdded(it, "track.mp3"))}
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(scrollState)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -134,5 +153,83 @@ fun GlueScreen(
             audioTracks = state.audioTracks,
             onSeek = {onEvent(GlueEvent.OnSeekChanged(it))}
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Music Files",
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (state.audioTracks.isEmpty()){
+            Button (
+                onClick = {galleryLauncher.launch("audio/*")},
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add Music")
+            }
+        } else {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                state.audioTracks.forEach{ track ->
+                    Row (
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(listOf(Color(0xFFa855f7), Color (0xFFec4899))),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box (
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    Brush.linearGradient(listOf(Color(0xFFa855f7), Color(0xFFec4899))),
+                                    RoundedCornerShape(8.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "1", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ){
+                            Text(
+                                text = track.name,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${track.startInTimelineMs / 1000f}s - ${track.endInTimelineMs / 1000f}s",
+                                color = Color.Gray,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Button(
+                            onClick = {galleryLauncher.launch("audio/*")},
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
+                            shape  = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Choose music", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
