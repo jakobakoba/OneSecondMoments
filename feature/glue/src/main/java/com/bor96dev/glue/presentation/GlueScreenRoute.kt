@@ -15,8 +15,16 @@ fun GlueScreenRoute(
     }
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentTime by viewModel.currentTimeMs.collectAsStateWithLifecycle()
+
     GlueScreen(
-        state =state,
+        title = state.title,
+        videoVolume = state.videoVolume,
+        musicVolume = state.musicVolume,
+        totalDurationMs = state.totalDurationMs,
+        currentTimeProvider = {currentTime},
+        videoMoments = state.videoMoments,
+        audioTracks = state.audioTracks,
         player = viewModel.player,
         onEvent = viewModel::onEvent,
         onBack = onBack

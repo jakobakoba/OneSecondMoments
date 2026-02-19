@@ -20,6 +20,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -32,12 +34,18 @@ import com.bor96dev.glue.presentation.state.AudioTrack
 
 @Composable
 fun Timeline(
-    currentTimeMs: Long,
+    currentTimeProvider: () -> Long,
     totalDurationMs: Long,
     videoMoments: List<MomentEntity>,
     audioTracks: List<AudioTrack>,
     onSeek: (Long) -> Unit
 ) {
+    val progress = remember (totalDurationMs){
+        derivedStateOf {
+            val time = currentTimeProvider()
+            if (totalDurationMs > 0) time.toFloat() / totalDurationMs else 0f
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -52,11 +60,6 @@ fun Timeline(
                 text = "Timeline",
                 color = Color.White,
                 fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "${currentTimeMs / 1000f}s / ${totalDurationMs / 1000f}",
-                color = Color.Gray,
-                fontSize = 12.sp
             )
         }
 
@@ -131,10 +134,9 @@ fun Timeline(
                             }
                         }
                     }
-                    val progress = if (totalDurationMs > 0) currentTimeMs.toFloat() / totalDurationMs else 0f
 
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val xOffset = maxWidth * progress
+                        val xOffset = maxWidth * progress.value
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
@@ -145,7 +147,7 @@ fun Timeline(
                     }
                 }
                 Slider(
-                    value = if (totalDurationMs > 0) currentTimeMs.toFloat() / totalDurationMs else 0f,
+                    value = progress.value,
                     onValueChange = {onSeek((it * totalDurationMs).toLong())},
                     colors = SliderDefaults.colors(
                         thumbColor = Color.White,

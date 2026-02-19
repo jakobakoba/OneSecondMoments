@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,15 +41,21 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
+import com.bor96dev.database.MomentEntity
 import com.bor96dev.glue.presentation.composables.Timeline
 import com.bor96dev.glue.presentation.composables.VolumeControls
 import com.bor96dev.glue.presentation.event.GlueEvent
-import com.bor96dev.glue.presentation.state.GlueState
-import com.google.common.math.LinearTransformation.vertical
+import com.bor96dev.glue.presentation.state.AudioTrack
 
 @Composable
 fun GlueScreen(
-    state: GlueState,
+    title: String,
+    videoVolume: Float,
+    musicVolume: Float,
+    totalDurationMs: Long,
+    currentTimeProvider: () -> Long,
+    videoMoments: List<MomentEntity>,
+    audioTracks: List<AudioTrack>,
     player: Player,
     onEvent: (GlueEvent) -> Unit,
     onBack: () -> Unit
@@ -61,7 +65,7 @@ fun GlueScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let{onEvent(GlueEvent.OnAudioAdded(it, "track.mp3"))}
+        uri?.let { onEvent(GlueEvent.OnAudioAdded(it, "track.mp3")) }
     }
     Column(
         modifier = Modifier
@@ -86,7 +90,7 @@ fun GlueScreen(
             }
 
             Text(
-                text = state.title,
+                text = title,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -138,20 +142,20 @@ fun GlueScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         VolumeControls(
-            videoVolume = state.videoVolume,
-            musicVolume = state.musicVolume,
-            onVideoVolumeChange = {onEvent(GlueEvent.OnVideoVolumeChanged(it))},
-            onMusicVolumeChange = {onEvent(GlueEvent.OnMusicVolumeChanged(it))}
+            videoVolume = videoVolume,
+            musicVolume = musicVolume,
+            onVideoVolumeChange = { onEvent(GlueEvent.OnVideoVolumeChanged(it)) },
+            onMusicVolumeChange = { onEvent(GlueEvent.OnMusicVolumeChanged(it)) }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Timeline(
-            currentTimeMs = state.currentTimeMs,
-            totalDurationMs = state.totalDurationMs,
-            videoMoments = state.videoMoments,
-            audioTracks = state.audioTracks,
-            onSeek = {onEvent(GlueEvent.OnSeekChanged(it))}
+            currentTimeProvider = currentTimeProvider,
+            totalDurationMs = totalDurationMs,
+            videoMoments = videoMoments,
+            audioTracks = audioTracks,
+            onSeek = { onEvent(GlueEvent.OnSeekChanged(it)) }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -164,9 +168,9 @@ fun GlueScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (state.audioTracks.isEmpty()){
-            Button (
-                onClick = {galleryLauncher.launch("audio/*")},
+        if (audioTracks.isEmpty()) {
+            Button(
+                onClick = { galleryLauncher.launch("audio/*") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
                 shape = RoundedCornerShape(12.dp)
@@ -179,22 +183,27 @@ fun GlueScreen(
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                state.audioTracks.forEach{ track ->
-                    Row (
+                audioTracks.forEach { track ->
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(
-                                Brush.linearGradient(listOf(Color(0xFFa855f7), Color (0xFFec4899))),
+                                Brush.linearGradient(listOf(Color(0xFFa855f7), Color(0xFFec4899))),
                                 RoundedCornerShape(16.dp)
                             )
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box (
+                        Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(
-                                    Brush.linearGradient(listOf(Color(0xFFa855f7), Color(0xFFec4899))),
+                                    Brush.linearGradient(
+                                        listOf(
+                                            Color(0xFFa855f7),
+                                            Color(0xFFec4899)
+                                        )
+                                    ),
                                     RoundedCornerShape(8.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -206,7 +215,7 @@ fun GlueScreen(
 
                         Column(
                             modifier = Modifier.weight(1f)
-                        ){
+                        ) {
                             Text(
                                 text = track.name,
                                 color = Color.White,
@@ -221,9 +230,9 @@ fun GlueScreen(
                         }
 
                         Button(
-                            onClick = {galleryLauncher.launch("audio/*")},
+                            onClick = { galleryLauncher.launch("audio/*") },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
-                            shape  = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("Choose music", fontSize = 12.sp)
                         }
