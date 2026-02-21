@@ -20,6 +20,7 @@ data class AudioTrack (
     val id: String = UUID.randomUUID().toString(),
     val uri: Uri,
     val name: String,
+    val fileDurationMs: Long,
     val startInTimelineMs: Long = 0,
     val endInTimelineMs: Long = 0,
     val trimStartMs: Long = 0,

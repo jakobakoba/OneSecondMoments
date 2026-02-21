@@ -1,11 +1,11 @@
 package com.bor96dev.glue.presentation
 
-import androidx.annotation.OptIn
+import android.content.Context
+import android.media.MediaMetadataRetriever
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
-import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.bor96dev.glue.domain.GlueRepository
@@ -16,6 +16,8 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +33,10 @@ class GlueViewModel @UnstableApi
     @Assisted private val monthQuery: String?,
     @Assisted private val year: Int?,
     private val repository: GlueRepository,
+    @ApplicationContext private val context: Context,
     playerBuilderProvider: Provider<ExoPlayer.Builder>
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(GlueState())
     val uiState = _uiState.asStateFlow()
 
@@ -85,10 +89,11 @@ class GlueViewModel @UnstableApi
                 _uiState.update { it.copy(isPlaying = isPlaying) }
                 if (isPlaying) {
                     startProgressTracking()
-                    syncMusicPlayback(forceSeek = true)
                 } else {
                     stopProgressTracking()
-                    musicPlayer.pause()
+                    if (!player.playWhenReady || player.playbackState == Player.STATE_ENDED) {
+                        musicPlayer.pause()
+                    }
                 }
             }
 
@@ -100,7 +105,7 @@ class GlueViewModel @UnstableApi
                 if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
                     return
                 }
-                syncMusicPlayback(forceSeek = true)
+                syncMusicPlayback(currentPos = getCurrentTimelinePosition(), forceSeek = true)
             }
         })
     }
@@ -109,7 +114,9 @@ class GlueViewModel @UnstableApi
         progressJob?.cancel()
         progressJob = viewModelScope.launch {
             while (true) {
-                _currentTimeMs.value = getCurrentTimelinePosition()
+                val currentPos = getCurrentTimelinePosition()
+                _currentTimeMs.value = currentPos
+                syncMusicPlayback(currentPos = currentPos, forceSeek = false)
                 delay(33)
             }
         }
@@ -120,38 +127,32 @@ class GlueViewModel @UnstableApi
     }
 
 
-    @OptIn(UnstableApi::class)
     private fun getCurrentTimelinePosition(): Long {
-        val timeline = player.currentTimeline
-        if (timeline.isEmpty) return player.currentPosition
-
-        var position = 0L
-        val window = Timeline.Window()
-        for (i in 0 until player.currentMediaItemIndex) {
-            timeline.getWindow(i, window)
-            if (window.durationUs != androidx.media3.common.C.TIME_UNSET) {
-                position += window.durationMs
-            } else {
-                position += 1000L
-            }
-        }
-        return position + player.currentPosition
+        return (player.currentMediaItemIndex * 1000L) + player.currentPosition
     }
 
-    private fun syncMusicPlayback(forceSeek: Boolean = false) {
-        val currentPos = getCurrentTimelinePosition()
-        val track = _uiState.value.audioTracks.firstOrNull() ?: return
+    private fun syncMusicPlayback(currentPos: Long, forceSeek: Boolean = false) {
+        val track = _uiState.value.audioTracks.firstOrNull()
 
-        val musicPos = currentPos - track.startInTimelineMs
-        val trackDuration = track.endInTimelineMs - track.startInTimelineMs
+        if (track == null) {
+            if (musicPlayer.isPlaying) musicPlayer.pause()
+            return
+        }
 
-        if (musicPos in 0 until trackDuration) {
+        val isInRange = currentPos in track.startInTimelineMs..track.endInTimelineMs
+
+        if (isInRange) {
             if (musicPlayer.currentMediaItem?.localConfiguration?.uri != track.uri) {
                 musicPlayer.setMediaItem(MediaItem.fromUri(track.uri))
                 musicPlayer.prepare()
+                return
             }
 
-            val targetMusicPos = track.trimStartMs + musicPos
+            if (musicPlayer.playbackState == Player.STATE_BUFFERING) {
+                return
+            }
+
+            val targetMusicPos = track.trimStartMs + (currentPos - track.startInTimelineMs)
             val drift = abs(musicPlayer.currentPosition - targetMusicPos)
 
             if (forceSeek || drift > 200) {
@@ -160,8 +161,12 @@ class GlueViewModel @UnstableApi
             if (player.isPlaying && !musicPlayer.isPlaying) {
                 musicPlayer.play()
             }
+
+            musicPlayer.volume = _uiState.value.musicVolume
         } else {
-            musicPlayer.pause()
+            if (musicPlayer.isPlaying) {
+                musicPlayer.pause()
+            }
         }
     }
 
@@ -189,20 +194,28 @@ class GlueViewModel @UnstableApi
             }
 
             is GlueEvent.OnAudioAdded -> {
-                val track = AudioTrack(
-                    uri = event.uri,
-                    name = event.name,
-                    startInTimelineMs = 0,
-                    endInTimelineMs = _uiState.value.totalDurationMs,
-                    volume = 1.0f
-                )
+                viewModelScope.launch(Dispatchers.IO) {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, event.uri)
+                        val duration =
+                            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                                ?.toLong() ?: 0L
 
-                _uiState.update { it.copy(audioTracks = listOf(track)) }
+                        val newTrack = AudioTrack(
+                            uri = event.uri,
+                            name = event.name,
+                            fileDurationMs = duration,
+                            startInTimelineMs = 0,
+                            endInTimelineMs = minOf(duration, _uiState.value.totalDurationMs)
+                        )
+                        _uiState.update { it.copy(audioTracks = it.audioTracks + newTrack) }
+                    } catch (_: Exception) {
 
-                musicPlayer.setMediaItem(MediaItem.fromUri(track.uri))
-                musicPlayer.prepare()
-                musicPlayer.volume = _uiState.value.musicVolume
-                syncMusicPlayback(forceSeek = true)
+                    } finally {
+                        retriever.release()
+                    }
+                }
             }
 
             is GlueEvent.OnSeekChanged -> {
@@ -211,7 +224,26 @@ class GlueViewModel @UnstableApi
                 val positionInItem = event.positionMs % 1000
                 player.seekTo(itemIndex, positionInItem)
                 _currentTimeMs.value = event.positionMs
-                syncMusicPlayback(forceSeek = true)
+                syncMusicPlayback(currentPos = event.positionMs, forceSeek = true)
+            }
+
+            is GlueEvent.OnAudioUpdate -> {
+                _uiState.update { state ->
+                    state.copy(
+                        audioTracks = state.audioTracks.map { track ->
+                            if (track.id == event.trackId) {
+                                track.copy(
+                                    startInTimelineMs = event.startMs,
+                                    endInTimelineMs = event.endMs,
+                                    trimStartMs = event.trimStartMs
+                                )
+                            } else {
+                                track
+                            }
+                        }
+                    )
+                }
+                syncMusicPlayback(getCurrentTimelinePosition(), forceSeek = true)
             }
 
             else -> {}

@@ -30,6 +30,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +65,7 @@ fun GlueScreen(
     onBack: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    var scrollEnabled by remember {mutableStateOf(true)}
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -71,7 +76,7 @@ fun GlueScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(scrollState)
+            .verticalScroll(scrollState, enabled = scrollEnabled)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -155,7 +160,9 @@ fun GlueScreen(
             totalDurationMs = totalDurationMs,
             videoMoments = videoMoments,
             audioTracks = audioTracks,
-            onSeek = { onEvent(GlueEvent.OnSeekChanged(it)) }
+            onSeek = { onEvent(GlueEvent.OnSeekChanged(it)) },
+            onEvent = onEvent,
+            onDragging = {dragging -> scrollEnabled = !dragging}
         )
 
         Spacer(modifier = Modifier.height(24.dp))

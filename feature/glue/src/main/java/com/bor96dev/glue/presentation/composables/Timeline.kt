@@ -1,10 +1,8 @@
 package com.bor96dev.glue.presentation.composables
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,12 +10,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -30,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bor96dev.database.MomentEntity
+import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
 
 @Composable
@@ -38,9 +33,11 @@ fun Timeline(
     totalDurationMs: Long,
     videoMoments: List<MomentEntity>,
     audioTracks: List<AudioTrack>,
-    onSeek: (Long) -> Unit
+    onSeek: (Long) -> Unit,
+    onEvent: (GlueEvent) -> Unit,
+    onDragging: (Boolean) -> Unit = {}
 ) {
-    val progress = remember (totalDurationMs){
+    val progress = remember(totalDurationMs) {
         derivedStateOf {
             val time = currentTimeProvider()
             if (totalDurationMs > 0) time.toFloat() / totalDurationMs else 0f
@@ -52,7 +49,7 @@ fun Timeline(
             .background(Color.DarkGray.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
             .padding(16.dp)
     ) {
-        Row (
+        Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -73,8 +70,9 @@ fun Timeline(
                 .padding(8.dp)
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)){
-                Row (
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -94,12 +92,11 @@ fun Timeline(
                         )
                     }
                 }
-
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                )  {
+                ) {
                     if (audioTracks.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -113,50 +110,26 @@ fun Timeline(
                         }
                     } else {
                         audioTracks.forEach { track ->
-                            Box (
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(Color(0xFFa855f7), Color(0xFFec4899))
-                                        ),
-                                        RoundedCornerShape(12.dp)
-                                    )
-                                    .border(1.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = track.name,
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    maxLines = 1
-                                )
-                            }
+                            AudioTrackItem(
+                                track = track,
+                                totalDurationMs = totalDurationMs,
+                                onDragging = onDragging,
+                                onUpdate = { start, end, trim ->
+                                    onEvent(GlueEvent.OnAudioUpdate(track.id, start, end, trim))
+                                }
+                            )
                         }
                     }
-
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val xOffset = maxWidth * progress.value
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(2.dp)
-                                .offset(x = xOffset)
-                                .background(Color(0xFF22c55e))
-                        )
-                    }
                 }
-                Slider(
-                    value = progress.value,
-                    onValueChange = {onSeek((it * totalDurationMs).toLong())},
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color(0xFF22c55e),
-                        inactiveTrackColor = Color.DarkGray
-                    )
+
+                AudioPlaybackSlider(
+                    progressProvider = { progress.value },
+                    totalDurationMs = totalDurationMs,
+                    onSeek = onSeek
                 )
+
+                ProgressIndicator(progressProvider = { progress.value })
             }
         }
     }
-
 }
