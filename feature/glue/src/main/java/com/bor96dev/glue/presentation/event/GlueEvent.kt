@@ -5,8 +5,6 @@ import android.net.Uri
 sealed interface GlueEvent {
     data class OnAudioAdded(val uri: Uri, val name: String) : GlueEvent
     data class OnAudioRemoved(val trackId: String) : GlueEvent
-    data class OnAudioPositionChanged(val trackId: String) : GlueEvent
-    data class OnAudioTrimChanged(val trackId: String) : GlueEvent
     data class OnAudioUpdate(
         val trackId: String,
         val startMs: Long,

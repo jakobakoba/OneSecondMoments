@@ -36,6 +36,7 @@ private enum class DragPart { START, END, CENTER }
 fun AudioTrackItem(
     track: AudioTrack,
     totalDurationMs: Long,
+    occupiedRanges: List<Pair<Long, Long>> = emptyList(),
     onDragging: (Boolean) -> Unit = {},
     onUpdate: (Long, Long, Long) -> Unit
 ) {
@@ -44,6 +45,8 @@ fun AudioTrackItem(
     var localTrimMs by remember(track.id) { mutableLongStateOf(track.trimStartMs) }
     var isDragging by remember { mutableStateOf(false) }
     val density = LocalDensity.current
+
+    val sortedOccupied = remember(occupiedRanges) { occupiedRanges.sortedBy { it.first } }
 
     LaunchedEffect(track.startInTimelineMs, track.endInTimelineMs, track.trimStartMs) {
         if (!isDragging) {
@@ -81,7 +84,7 @@ fun AudioTrackItem(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 )
-                .pointerInput(track.id, totalDurationMs) {
+                .pointerInput(track.id, totalDurationMs, sortedOccupied) {
                     detectHorizontalDragGestures(
                         onDragStart = { offset ->
                             isDragging = true
@@ -113,10 +116,18 @@ fun AudioTrackItem(
                             change.consume()
                             if (msToPx == 0f) return@detectHorizontalDragGestures
                             val deltaMs = (dragAmount / msToPx).toLong()
+
+                            val prevEnd = sortedOccupied
+                                .filter { it.second <= localStartMs }
+                                .maxOfOrNull { it.second } ?: 0L
+                            val nextStart = sortedOccupied
+                                .filter { it.first >= localEndMs }
+                                .minOfOrNull { it.first } ?: totalDurationMs
+
                             when (dragPart) {
                                 DragPart.START -> {
                                     val newStart =
-                                        (localStartMs + deltaMs).coerceIn(0, localEndMs - 200)
+                                        (localStartMs + deltaMs).coerceIn(prevEnd, localEndMs - 200)
                                     val newTrim =
                                         (localTrimMs + (newStart - localStartMs)).coerceAtLeast(0)
                                     localStartMs = newStart
@@ -126,7 +137,7 @@ fun AudioTrackItem(
                                 DragPart.END -> {
                                     val newEnd = (localEndMs + deltaMs).coerceIn(
                                         localStartMs + 200,
-                                        totalDurationMs
+                                        nextStart
                                     )
                                     if (newEnd - localStartMs + localTrimMs <= track.fileDurationMs) {
                                         localEndMs = newEnd
@@ -136,8 +147,8 @@ fun AudioTrackItem(
                                 DragPart.CENTER -> {
                                     val duration = localEndMs - localStartMs
                                     val newStart = (localStartMs + deltaMs).coerceIn(
-                                        0,
-                                        totalDurationMs - duration
+                                        prevEnd,
+                                        nextStart - duration
                                     )
                                     localStartMs = newStart
                                     localEndMs = newStart + duration

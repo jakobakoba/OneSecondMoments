@@ -110,9 +110,14 @@ fun Timeline(
                         }
                     } else {
                         audioTracks.forEach { track ->
+                            val occupiedRanges = audioTracks
+                                .filter { it.id != track.id }
+                                .map { it.startInTimelineMs to it.endInTimelineMs }
+
                             AudioTrackItem(
                                 track = track,
                                 totalDurationMs = totalDurationMs,
+                                occupiedRanges = occupiedRanges,
                                 onDragging = onDragging,
                                 onUpdate = { start, end, trim ->
                                     onEvent(GlueEvent.OnAudioUpdate(track.id, start, end, trim))
