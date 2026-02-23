@@ -1,18 +1,32 @@
 package com.bor96dev.edit.presentation
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.OverlayEffect
+import androidx.media3.effect.StaticOverlaySettings
+import androidx.media3.effect.TextOverlay
+import androidx.media3.effect.TextureOverlay
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -20,6 +34,7 @@ import com.bor96dev.database.MomentEntity
 import com.bor96dev.database.MomentsDao
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
+import com.google.common.collect.ImmutableList
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -33,6 +48,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -51,7 +68,7 @@ class EditViewModel @UnstableApi
         fun create(videoUri: String, date: Long): EditViewModel
     }
 
-    private val _uiState = MutableStateFlow(EditState())
+    private val _uiState = MutableStateFlow(EditState(dateText = date.toFormattedDateString()))
     val uiState = _uiState.asStateFlow()
 
     val player: Player = playerBuilder.build()
@@ -89,12 +106,16 @@ class EditViewModel @UnstableApi
     }
 
     @OptIn(UnstableApi::class)
-    private suspend fun trimVideo(inputUri: Uri, startMs: Long, endMs: Long): Uri =
+    private suspend fun trimVideo(
+        inputUri: Uri,
+        startMs: Long,
+        endMs: Long,
+        dateText: String
+    ): Uri =
         suspendCancellableCoroutine { continuation ->
             val outputFile = File(context.filesDir, "moment_${System.currentTimeMillis()}.mp4")
 
-            val transformer = Transformer.Builder(context)
-                .build()
+            val transformer = Transformer.Builder(context).build()
 
             val clippingConfiguration = MediaItem.ClippingConfiguration.Builder()
                 .setStartPositionMs(startMs)
@@ -104,6 +125,46 @@ class EditViewModel @UnstableApi
             val mediaItem = MediaItem.Builder()
                 .setUri(inputUri)
                 .setClippingConfiguration(clippingConfiguration)
+                .build()
+
+            val overlayTextSpannable = SpannableString(dateText)
+
+            overlayTextSpannable.setSpan(
+                ForegroundColorSpan(Color.WHITE),
+                0,
+                overlayTextSpannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+
+            overlayTextSpannable.setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                overlayTextSpannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+
+            overlayTextSpannable.setSpan(
+                AbsoluteSizeSpan(70, true),
+                0,
+                overlayTextSpannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+
+            val settings = StaticOverlaySettings.Builder()
+                .setOverlayFrameAnchor(-1f, -1f)
+                .setBackgroundFrameAnchor(-0.95f, -0.90f)
+                .build()
+
+            val textOverlay = TextOverlay.createStaticTextOverlay(overlayTextSpannable, settings)
+            val overlayEffect = OverlayEffect(ImmutableList.of(textOverlay as TextureOverlay))
+
+            val effects = Effects(
+                ImmutableList.of(),
+                ImmutableList.of<Effect>(overlayEffect)
+            )
+
+            val editedMediaItem = EditedMediaItem.Builder(mediaItem)
+                .setEffects(effects)
                 .build()
 
             transformer.addListener(object : Transformer.Listener {
@@ -120,12 +181,9 @@ class EditViewModel @UnstableApi
                 }
             })
 
-            transformer.start(mediaItem, outputFile.absolutePath)
-            continuation.invokeOnCancellation {
-                transformer.cancel()
-            }
+            transformer.start(editedMediaItem, outputFile.absolutePath)
+            continuation.invokeOnCancellation { transformer.cancel() }
         }
-
 
     fun onEvent(event: EditEvent) {
         when (event) {
@@ -170,7 +228,8 @@ class EditViewModel @UnstableApi
                     try {
                         val startMs = _uiState.value.selectedStartMs
                         val inputUri = _uiState.value.videoUri ?: return@launch
-                        val outputUri = trimVideo(inputUri, startMs, startMs + 1000)
+                        val outputUri =
+                            trimVideo(inputUri, startMs, startMs + 1000, _uiState.value.dateText)
                         val dateString = date.toDateString()
 
                         momentsDao.upsertMoment(
@@ -204,3 +263,10 @@ fun Long.toDateString(): String {
         .toString()
 }
 
+fun Long.toFormattedDateString(): String {
+    val formatter = DateTimeFormatter.ofPattern("MMM dd yyyy", Locale.ENGLISH)
+    return Instant.ofEpochMilli(this)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()
+        .format(formatter)
+}

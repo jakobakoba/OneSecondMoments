@@ -122,6 +122,17 @@ fun EditScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
+            if (state.dateText.isNotEmpty()) {
+                Text(
+                    text = state.dateText,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(8.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
