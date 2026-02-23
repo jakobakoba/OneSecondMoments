@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,9 +33,18 @@ import com.bor96dev.montage.presentation.event.MontageEvent
 
 @Composable
 fun MontageScreen(
+    onNavigateToGlue: (String?, Int?) -> Unit,
     viewModel: MontageViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.navigateToGlue, state.navigateToGlueYear){
+        if (state.navigateToGlue != null || state.navigateToGlueYear != null){
+            onNavigateToGlue(state.navigateToGlue, state.navigateToGlueYear)
+            viewModel.onEvent(MontageEvent.OnNavigationDone)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -112,7 +122,7 @@ fun MontageScreen(
                     StatCard(
                         title = "${stat.yearMonth.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${stat.yearMonth.year}",
                         subtitle = "${stat.daysRecorded} days recorded",
-                        onClick = {viewModel.onEvent(MontageEvent.ExportMonth(stat.yearMonth))}
+                        onClick = {viewModel.onEvent(MontageEvent.NavigateToGlueMonth(stat.yearMonth))}
                     )
                 }
             } else {
@@ -120,7 +130,7 @@ fun MontageScreen(
                     StatCard(
                         title = stat.year.toString(),
                         subtitle = "${stat.daysRecorded} days recorded",
-                        onClick = {viewModel.onEvent(MontageEvent.ExportYear(stat.year))}
+                        onClick = {viewModel.onEvent(MontageEvent.NavigateToGlueYear(stat.year))}
                     )
                 }
             }

@@ -57,16 +57,18 @@ class MontageViewModel @Inject constructor(
             is MontageEvent.TogglePeriod -> {
                 _uiState.update{it.copy(isMonthly = !it.isMonthly)}
             }
-            is MontageEvent.OnMusicToggled -> {
-                _uiState.update{it.copy(isMusicEnabled = event.enabled)}
+            is MontageEvent.NavigateToGlueYear -> {
+                _uiState.update {it.copy(navigateToGlueYear = event.year)}
             }
-            is MontageEvent.OnMusicVolumeChanged -> {
-                _uiState.update{it.copy(musicVolume = event.volume)}
+            is MontageEvent.NavigateToGlueMonth -> {
+                _uiState.update {it.copy(navigateToGlue = event.yearMonth.toString())}
             }
-            is MontageEvent.OnVideoVolumeChanged -> {
-                _uiState.update{it.copy(videoVolume = event.volume)}
+            is MontageEvent.OnNavigationDone -> {
+                _uiState.update {it.copy(
+                    navigateToGlue = null,
+                    navigateToGlueYear = null
+                )}
             }
-            else -> {}
         }
     }
 }

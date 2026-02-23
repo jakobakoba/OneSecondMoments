@@ -13,4 +13,6 @@ sealed interface Route : NavKey{
     data object Calendar: Route, NavKey
     @Serializable
     data class Edit(val videoUri: String, val date: Long): Route, NavKey
+    @Serializable
+    data class Glue(val monthQuery: String? = null, val year: Int? = null): Route, NavKey
 }

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.bor96dev.edit"
+    namespace = "com.bor96dev.glue"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -46,6 +46,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -56,8 +57,6 @@ dependencies {
     implementation(libs.exoplayer)
     implementation(libs.exoplayer.ui)
 
-    implementation(libs.icons)
-
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
@@ -65,6 +64,8 @@ dependencies {
     implementation(libs.media3.transformer)
     implementation(libs.media3.effect)
     implementation(libs.media3.common)
+
+    implementation(libs.icons)
 
 
 }

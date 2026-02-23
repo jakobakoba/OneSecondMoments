@@ -47,6 +47,7 @@ dependencies {
     implementation(project(":feature:record"))
     implementation(project(":feature:montage"))
     implementation(project(":feature:edit"))
+    implementation(project(":feature:glue"))
     implementation(project(":core:ui"))
     implementation(project(":core:database"))
 
