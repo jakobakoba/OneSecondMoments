@@ -284,7 +284,7 @@ fun GlueScreen(
                 Button(
                     onClick = { galleryLauncher.launch("audio/*") },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = audioTracks.size < 5,
+                    enabled = audioTracks.size < 5 && !isMerging,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
