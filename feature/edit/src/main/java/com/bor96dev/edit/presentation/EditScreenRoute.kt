@@ -12,10 +12,11 @@ import com.bor96dev.edit.presentation.event.EditEvent
 fun EditScreenRoute(
     videoUri: String,
     date: Long,
+    navId: Long,
     onBack: () -> Unit,
-    viewModel: EditViewModel = hiltViewModel<EditViewModel, EditViewModel.Factory>(
-        key = videoUri
-    ) {factory ->
+    viewModel: EditViewModel = hiltViewModel<EditViewModel, EditViewModel.Factory> (
+        key = navId.toString()
+    ) { factory ->
         factory.create(videoUri = videoUri, date = date)
     }
 ) {
