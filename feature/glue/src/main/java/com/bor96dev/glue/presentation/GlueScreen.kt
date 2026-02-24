@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -51,7 +52,6 @@ import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
 import com.bor96dev.database.MomentEntity
 import com.bor96dev.glue.presentation.composables.Timeline
-import com.bor96dev.glue.presentation.composables.VolumeControls
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
 
@@ -68,18 +68,20 @@ private fun getFileName(context: Context, uri: Uri): String {
 @Composable
 fun GlueScreen(
     title: String,
-    videoVolume: Float,
-    musicVolume: Float,
     totalDurationMs: Long,
     currentTimeProvider: () -> Long,
     videoMoments: List<MomentEntity>,
     audioTracks: List<AudioTrack>,
     player: Player,
+    isMerging: Boolean,
+    isExporting: Boolean,
+    exportSuccess: Boolean,
+    error: String?,
     onEvent: (GlueEvent) -> Unit,
     onBack: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    var scrollEnabled by remember {mutableStateOf(true)}
+    var scrollEnabled by remember { mutableStateOf(true) }
     val context = LocalContext.current
 
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -90,184 +92,229 @@ fun GlueScreen(
             onEvent(GlueEvent.OnAudioAdded(it, name))
         }
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(scrollState, enabled = scrollEnabled)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(scrollState, enabled = scrollEnabled)
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .size(48.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null
-                )
-            }
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null
+                    )
+                }
 
-            Text(
-                text = title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Button(
-                onClick = { onEvent(GlueEvent.OnExportClicked) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
-                shape = RoundedCornerShape(12.dp)
-            ) {
                 Text(
-                    text = "Export",
+                    text = title,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
-            }
-        }
-        Spacer(modifier = Modifier.height(24.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(24.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = false
-                        this.player = player
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
-
-            IconButton(
-                onClick = { onEvent(GlueEvent.TogglePlay) },
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        VolumeControls(
-            videoVolume = videoVolume,
-            musicVolume = musicVolume,
-            onVideoVolumeChange = { onEvent(GlueEvent.OnVideoVolumeChanged(it)) },
-            onMusicVolumeChange = { onEvent(GlueEvent.OnMusicVolumeChanged(it)) }
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Timeline(
-            currentTimeProvider = currentTimeProvider,
-            totalDurationMs = totalDurationMs,
-            videoMoments = videoMoments,
-            audioTracks = audioTracks,
-            onSeek = { onEvent(GlueEvent.OnSeekChanged(it)) },
-            onEvent = onEvent,
-            onDragging = {dragging -> scrollEnabled = !dragging}
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Music Files",
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            audioTracks.forEachIndexed { index, track ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(listOf(Color(0xFFa855f7), Color(0xFFec4899))),
-                            RoundedCornerShape(16.dp)
-                        )
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Button(
+                    onClick = { onEvent(GlueEvent.OnExportClicked) },
+                    enabled = !isMerging && !isExporting,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
+                    Text(
+                        text = "Export",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(24.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        PlayerView(ctx).apply {
+                            useController = false
+                            this.player = player
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (isMerging) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        Color(0xFFa855f7),
-                                        Color(0xFFec4899)
-                                    )
-                                ),
-                                RoundedCornerShape(8.dp)
-                            ),
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.6f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "${index + 1}",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = Color.White)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Preparing preview...", color = Color.White, fontSize = 13.sp)
+                        }
                     }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = track.name,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                        Text(
-                            text = "${track.startInTimelineMs / 1000f}s - ${track.endInTimelineMs / 1000f}s",
-                            color = Color.Gray,
-                            fontSize = 11.sp
-                        )
-                    }
-
+                } else {
                     IconButton(
-                        onClick = { onEvent(GlueEvent.OnAudioRemoved(track.id)) }
+                        onClick = { onEvent(GlueEvent.TogglePlay) },
+                        modifier = Modifier
+                            .size(64.dp)
+                            .background(Color.White.copy(alpha = 0.2f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Remove track",
-                            tint = Color.White
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
                         )
                     }
                 }
             }
 
-            Button(
-                onClick = { galleryLauncher.launch("audio/*") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = audioTracks.size < 5,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
-                shape = RoundedCornerShape(12.dp)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Timeline(
+                currentTimeProvider = currentTimeProvider,
+                totalDurationMs = totalDurationMs,
+                videoMoments = videoMoments,
+                audioTracks = audioTracks,
+                onSeek = { onEvent(GlueEvent.OnSeekChanged(it)) },
+                onEvent = onEvent,
+                onDragging = { dragging -> scrollEnabled = !dragging }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Music Files",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                audioTracks.forEachIndexed { index, track ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(listOf(Color(0xFFa855f7), Color(0xFFec4899))),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFFa855f7), Color(0xFFec4899))
+                                    ),
+                                    RoundedCornerShape(8.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${index + 1}",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = track.name,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "${track.startInTimelineMs / 1000f}s - ${track.endInTimelineMs / 1000f}s",
+                                color = Color.Gray,
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        IconButton(onClick = { onEvent(GlueEvent.OnAudioRemoved(track.id)) }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Remove track",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = { galleryLauncher.launch("audio/*") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = audioTracks.size < 5,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add Music")
+                }
+            }
+        }
+
+        if (isExporting) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Music")
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color.White)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Exporting...",
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        if (error != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .background(Color(0xFFb91c1c), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(text = error, color = Color.White, fontSize = 14.sp)
+            }
+        }
+
+        if (exportSuccess) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .background(Color(0xFF15803d), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(text = "Saved to gallery", color = Color.White, fontSize = 14.sp)
             }
         }
     }

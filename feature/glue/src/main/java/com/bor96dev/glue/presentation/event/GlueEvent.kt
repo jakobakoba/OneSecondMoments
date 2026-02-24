@@ -12,8 +12,6 @@ sealed interface GlueEvent {
         val trimStartMs: Long
     ) : GlueEvent
 
-    data class OnVideoVolumeChanged(val volume: Float) : GlueEvent
-    data class OnMusicVolumeChanged(val volume: Float) : GlueEvent
     object TogglePlay : GlueEvent
     object OnExportClicked : GlueEvent
     data class OnSeekChanged(val positionMs: Long) : GlueEvent

@@ -1,13 +1,26 @@
 package com.bor96dev.glue.presentation
 
+import android.content.ContentValues
 import android.content.Context
 import android.media.MediaMetadataRetriever
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.annotation.OptIn
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
 import com.bor96dev.glue.domain.GlueRepository
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
@@ -25,11 +38,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Provider
 import kotlin.math.abs
 
+@UnstableApi
 @HiltViewModel(assistedFactory = GlueViewModel.Factory::class)
-class GlueViewModel @UnstableApi
+class GlueViewModel @OptIn(UnstableApi::class)
 @AssistedInject constructor(
     @Assisted private val monthQuery: String?,
     @Assisted private val year: Int?,
@@ -44,6 +59,7 @@ class GlueViewModel @UnstableApi
     private val _currentTimeMs = MutableStateFlow(0L)
     val currentTimeMs = _currentTimeMs.asStateFlow()
 
+    @OptIn(UnstableApi::class)
     val player = playerBuilderProvider.get().build().apply {
         repeatMode = Player.REPEAT_MODE_OFF
     }
@@ -51,6 +67,10 @@ class GlueViewModel @UnstableApi
     private val musicPlayers = mutableMapOf<String, ExoPlayer>()
 
     private var progressJob: Job? = null
+    private var premergeTransformer: Transformer? = null
+    private var exportTransformer: Transformer? = null
+
+    private var premergedVideoPath: String? = null
 
     init {
         loadMoments()
@@ -74,11 +94,69 @@ class GlueViewModel @UnstableApi
                     )
                 }
 
-                val mediaItems = moments.map { MediaItem.fromUri(it.videoUri) }
-                player.setMediaItems(mediaItems)
-                player.prepare()
+                startPremerge(moments.map { it.videoUri })
             }
         }
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun startPremerge(videoUris: List<String>) {
+        if (videoUris.isEmpty()) return
+
+        val title = monthQuery ?: year?.toString() ?: "output"
+        val cacheFile = File(context.cacheDir, "premerge_$title.mp4")
+
+        if (cacheFile.exists()) cacheFile.delete()
+
+        _uiState.update { it.copy(isMerging = true) }
+
+        val editedItems = videoUris.map { uri ->
+            EditedMediaItem.Builder(MediaItem.fromUri(uri))
+                .setRemoveAudio(false)
+                .build()
+        }
+
+        val sequence = EditedMediaItemSequence.Builder(
+            setOf(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO)
+        )
+            .addItems(*editedItems.toTypedArray())
+            .build()
+
+        val composition = Composition.Builder(listOf(sequence)).build()
+
+        premergeTransformer = Transformer.Builder(context)
+            .addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    premergedVideoPath = cacheFile.absolutePath
+                    _uiState.update { it.copy(isMerging = false) }
+                    onPremergeReady(cacheFile.absolutePath)
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException
+                ) {
+                    _uiState.update {
+                        it.copy(
+                            isMerging = false,
+                            error = "Preview preparation failed: ${exportException.message}"
+                        )
+                    }
+                    val mediaItems = _uiState.value.videoMoments.map { MediaItem.fromUri(it.videoUri) }
+                    player.setMediaItems(mediaItems)
+                    player.prepare()
+                }
+            })
+            .build()
+
+        premergeTransformer!!.start(composition, cacheFile.absolutePath)
+    }
+
+    private fun onPremergeReady(path: String) {
+        premergedVideoPath = path
+        player.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(path))))
+        player.prepare()
     }
 
     private fun setupPlayerListeners() {
@@ -100,10 +178,8 @@ class GlueViewModel @UnstableApi
                 newPosition: Player.PositionInfo,
                 reason: Int
             ) {
-                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) {
-                    return
-                }
-                syncMusicPlayback(currentPos = getCurrentTimelinePosition(), forceSeek = true)
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) return
+                syncMusicPlayback(currentPos = player.currentPosition, forceSeek = true)
             }
         })
     }
@@ -112,7 +188,7 @@ class GlueViewModel @UnstableApi
         progressJob?.cancel()
         progressJob = viewModelScope.launch {
             while (true) {
-                val currentPos = getCurrentTimelinePosition()
+                val currentPos = player.currentPosition
                 _currentTimeMs.value = currentPos
                 syncMusicPlayback(currentPos = currentPos, forceSeek = false)
                 delay(33)
@@ -122,16 +198,6 @@ class GlueViewModel @UnstableApi
 
     private fun stopProgressTracking() {
         progressJob?.cancel()
-    }
-
-    private fun getCurrentTimelinePosition(): Long {
-        return (player.currentMediaItemIndex * 1000L) + player.currentPosition
-    }
-
-    private fun createMusicPlayer(): ExoPlayer {
-        return playerBuilderProvider.get().build().apply {
-            repeatMode = Player.REPEAT_MODE_OFF
-        }
     }
 
     private fun syncMusicPlayback(currentPos: Long, forceSeek: Boolean = false) {
@@ -151,9 +217,7 @@ class GlueViewModel @UnstableApi
                     continue
                 }
 
-                if (musicPlayer.playbackState == Player.STATE_BUFFERING) {
-                    continue
-                }
+                if (musicPlayer.playbackState == Player.STATE_BUFFERING) continue
 
                 val targetMusicPos = track.trimStartMs + (currentPos - track.startInTimelineMs)
                 val drift = abs(musicPlayer.currentPosition - targetMusicPos)
@@ -164,12 +228,8 @@ class GlueViewModel @UnstableApi
                 if (player.isPlaying && !musicPlayer.isPlaying) {
                     musicPlayer.play()
                 }
-
-                musicPlayer.volume = state.musicVolume
             } else {
-                if (musicPlayer.isPlaying) {
-                    musicPlayer.pause()
-                }
+                if (musicPlayer.isPlaying) musicPlayer.pause()
             }
         }
 
@@ -233,6 +293,156 @@ class GlueViewModel @UnstableApi
         return minOf(desiredEndMs, nextTrackStart)
     }
 
+    @OptIn(UnstableApi::class)
+    private fun doExport() {
+        val mergedPath = premergedVideoPath
+        if (mergedPath == null) {
+            _uiState.update { it.copy(error = "Video is not ready yet, please wait") }
+            return
+        }
+
+        _uiState.update { it.copy(isExporting = true, error = null) }
+
+        val state = _uiState.value
+        val title = state.title
+        val outputFile = File(context.cacheDir, "export_$title.mp4")
+        if (outputFile.exists()) outputFile.delete()
+
+        val videoItem = EditedMediaItem.Builder(MediaItem.fromUri(Uri.fromFile(File(mergedPath))))
+            .build()
+
+        val sequences = mutableListOf<EditedMediaItemSequence>()
+
+        val videoSequence = EditedMediaItemSequence.Builder(
+            setOf(C.TRACK_TYPE_VIDEO, C.TRACK_TYPE_AUDIO)
+        )
+            .addItem(videoItem)
+            .build()
+        sequences.add(videoSequence)
+
+        for (track in state.audioTracks) {
+            val audioSequenceItems = mutableListOf<EditedMediaItem>()
+
+            if (track.startInTimelineMs > 0) {
+                val silentMixer = androidx.media3.common.audio.ChannelMixingAudioProcessor()
+                silentMixer.putChannelMixingMatrix(
+                    androidx.media3.common.audio.ChannelMixingMatrix(
+                        1, 1, floatArrayOf(0f)
+                    )
+                )
+                silentMixer.putChannelMixingMatrix(
+                    androidx.media3.common.audio.ChannelMixingMatrix(
+                        2, 2, floatArrayOf(0f, 0f, 0f, 0f)
+                    )
+                )
+                val silentClip = EditedMediaItem.Builder(
+                    MediaItem.Builder()
+                        .setUri(track.uri)
+                        .setClippingConfiguration(
+                            MediaItem.ClippingConfiguration.Builder()
+                                .setStartPositionMs(track.trimStartMs)
+                                .setEndPositionMs(track.trimStartMs + track.startInTimelineMs)
+                                .build()
+                        )
+                        .build()
+                )
+                    .setRemoveVideo(true)
+                    .setEffects(
+                        androidx.media3.transformer.Effects(listOf(silentMixer), emptyList())
+                    )
+                    .build()
+                audioSequenceItems.add(silentClip)
+            }
+
+            val audioDuration = track.endInTimelineMs - track.startInTimelineMs
+            val audioClip = EditedMediaItem.Builder(
+                MediaItem.Builder()
+                    .setUri(track.uri)
+                    .setClippingConfiguration(
+                        MediaItem.ClippingConfiguration.Builder()
+                            .setStartPositionMs(track.trimStartMs)
+                            .setEndPositionMs(track.trimStartMs + audioDuration)
+                            .build()
+                    )
+                    .build()
+            )
+                .setRemoveVideo(true)
+                .build()
+            audioSequenceItems.add(audioClip)
+
+            val audioSequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
+                .addItems(*audioSequenceItems.toTypedArray())
+                .build()
+            sequences.add(audioSequence)
+        }
+
+        val composition = Composition.Builder(sequences).build()
+
+        exportTransformer = Transformer.Builder(context)
+            .addListener(object : Transformer.Listener {
+                override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    viewModelScope.launch {
+                        val saved = saveToGallery(outputFile, title)
+                        outputFile.delete()
+                        if (saved) {
+                            _uiState.update { it.copy(isExporting = false, exportSuccess = true) }
+                        } else {
+                            _uiState.update {
+                                it.copy(isExporting = false, error = "Failed to save to gallery")
+                            }
+                        }
+                    }
+                }
+
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException
+                ) {
+                    _uiState.update {
+                        it.copy(isExporting = false, error = "Export failed: ${exportException.message}")
+                    }
+                }
+            })
+            .build()
+
+        exportTransformer!!.start(composition, outputFile.absolutePath)
+    }
+
+    private suspend fun saveToGallery(file: File, title: String): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val resolver = context.contentResolver
+                val fileName = "OneSecondMoments_${title}_${System.currentTimeMillis()}.mp4"
+
+                val values = ContentValues().apply {
+                    put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                    put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Video.Media.IS_PENDING, 1)
+                    }
+                }
+
+                val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+                    ?: return@withContext false
+
+                resolver.openOutputStream(uri)?.use { out ->
+                    file.inputStream().use { it.copyTo(out) }
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    values.clear()
+                    values.put(MediaStore.Video.Media.IS_PENDING, 0)
+                    resolver.update(uri, values, null, null)
+                }
+
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+
     fun onEvent(event: GlueEvent) {
         when (event) {
             is GlueEvent.TogglePlay -> {
@@ -244,16 +454,6 @@ class GlueViewModel @UnstableApi
                     }
                     player.play()
                 }
-            }
-
-            is GlueEvent.OnMusicVolumeChanged -> {
-                _uiState.update { it.copy(musicVolume = event.volume) }
-                musicPlayers.values.forEach { it.volume = event.volume }
-            }
-
-            is GlueEvent.OnVideoVolumeChanged -> {
-                _uiState.update { it.copy(videoVolume = event.volume) }
-                player.volume = event.volume
             }
 
             is GlueEvent.OnAudioAdded -> {
@@ -290,7 +490,9 @@ class GlueViewModel @UnstableApi
                         endInTimelineMs = actualEnd
                     )
 
-                    val newPlayer = createMusicPlayer()
+                    val newPlayer = playerBuilderProvider.get().build().apply {
+                        repeatMode = Player.REPEAT_MODE_OFF
+                    }
                     musicPlayers[newTrack.id] = newPlayer
 
                     _uiState.update { it.copy(audioTracks = it.audioTracks + newTrack) }
@@ -304,10 +506,7 @@ class GlueViewModel @UnstableApi
             }
 
             is GlueEvent.OnSeekChanged -> {
-                val itemIndex = (event.positionMs / 1000).toInt()
-                    .coerceIn(0, _uiState.value.videoMoments.size - 1)
-                val positionInItem = event.positionMs % 1000
-                player.seekTo(itemIndex, positionInItem)
+                player.seekTo(event.positionMs)
                 _currentTimeMs.value = event.positionMs
                 syncMusicPlayback(currentPos = event.positionMs, forceSeek = true)
             }
@@ -331,18 +530,25 @@ class GlueViewModel @UnstableApi
                         }
                     )
                 }
-                syncMusicPlayback(getCurrentTimelinePosition(), forceSeek = true)
+                syncMusicPlayback(player.currentPosition, forceSeek = true)
             }
 
-            else -> {}
+            is GlueEvent.OnExportClicked -> {
+                doExport()
+            }
         }
     }
 
+    @OptIn(UnstableApi::class)
     override fun onCleared() {
         stopProgressTracking()
+        premergeTransformer?.cancel()
+        exportTransformer?.cancel()
         player.release()
         musicPlayers.values.forEach { it.release() }
         musicPlayers.clear()
+        premergedVideoPath?.let { File(it).delete() }
+        premergedVideoPath = null
         super.onCleared()
     }
 
