@@ -31,7 +31,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import com.bor96dev.database.MomentEntity
-import com.bor96dev.database.MomentsDao
+import com.bor96dev.edit.domain.EditRepository
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
 import com.google.common.collect.ImmutableList
@@ -59,7 +59,7 @@ class EditViewModel @UnstableApi
     @Assisted private val videoUri: String,
     @Assisted private val date: Long,
     @ApplicationContext private val context: Context,
-    private val momentsDao: MomentsDao,
+    private val editRepository: EditRepository,
     private val playerBuilder: ExoPlayer.Builder
 ) : ViewModel() {
 
@@ -262,7 +262,7 @@ class EditViewModel @UnstableApi
                             trimVideo(inputUri, startMs, startMs + 1000, _uiState.value.dateText)
                         val dateString = date.toDateString()
 
-                        momentsDao.upsertMoment(
+                        editRepository.upsertMoment(
                             MomentEntity(
                                 date = dateString,
                                 videoUri = outputUri.toString()
