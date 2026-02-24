@@ -59,10 +59,9 @@ class GlueViewModel @OptIn(UnstableApi::class)
     private val _currentTimeMs = MutableStateFlow(0L)
     val currentTimeMs = _currentTimeMs.asStateFlow()
 
-    @OptIn(UnstableApi::class)
-    val player = playerBuilderProvider.get().build().apply {
-        repeatMode = Player.REPEAT_MODE_OFF
-    }
+    private var internalPlayer: ExoPlayer? = null
+    private val _playerFlow = MutableStateFlow<ExoPlayer?>(null)
+    val playerFlow = _playerFlow.asStateFlow()
 
     private val musicPlayers = mutableMapOf<String, ExoPlayer>()
 
@@ -72,9 +71,65 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
     private var premergedVideoPath: String? = null
 
+    private var savedPositionMs: Long = 0L
+
     init {
         loadMoments()
-        setupPlayerListeners()
+    }
+
+    fun onStart() {
+        if (internalPlayer == null) {
+            initializePlayers()
+        }
+    }
+
+    fun onStop() {
+        releasePlayers()
+    }
+
+    private fun initializePlayers() {
+        val newPlayer = playerBuilderProvider.get().build().apply {
+            repeatMode = Player.REPEAT_MODE_OFF
+        }
+
+        internalPlayer = newPlayer
+        setupPlayerListeners(newPlayer)
+
+        premergedVideoPath?.let { path ->
+            newPlayer.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(path))))
+            newPlayer.prepare()
+            newPlayer.seekTo(savedPositionMs)
+        }
+
+        val audioTracks = _uiState.value.audioTracks
+        audioTracks.forEach { track ->
+            val musicPlayer = playerBuilderProvider.get().build().apply {
+                repeatMode = Player.REPEAT_MODE_OFF
+            }
+            musicPlayer.setMediaItem(MediaItem.fromUri(track.uri))
+            musicPlayer.prepare()
+            musicPlayers[track.id] = musicPlayer
+        }
+
+        _playerFlow.value = newPlayer
+    }
+
+    private fun releasePlayers() {
+        internalPlayer?.let {
+            savedPositionMs = it.currentPosition
+            it.stop()
+            it.release()
+        }
+        internalPlayer = null
+        _playerFlow.value = null
+
+        musicPlayers.values.forEach {
+            it.stop()
+            it.release()
+        }
+        musicPlayers.clear()
+
+        stopProgressTracking()
     }
 
     private fun loadMoments() {
@@ -93,7 +148,6 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         title = monthQuery ?: year?.toString() ?: ""
                     )
                 }
-
                 startPremerge(moments.map { it.videoUri })
             }
         }
@@ -129,7 +183,11 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     premergedVideoPath = cacheFile.absolutePath
                     _uiState.update { it.copy(isMerging = false) }
-                    onPremergeReady(cacheFile.absolutePath)
+
+                    internalPlayer?.let { player ->
+                        player.setMediaItem(MediaItem.fromUri(Uri.fromFile(cacheFile)))
+                        player.prepare()
+                    }
                 }
 
                 override fun onError(
@@ -143,9 +201,11 @@ class GlueViewModel @OptIn(UnstableApi::class)
                             error = "Preview preparation failed: ${exportException.message}"
                         )
                     }
-                    val mediaItems = _uiState.value.videoMoments.map { MediaItem.fromUri(it.videoUri) }
-                    player.setMediaItems(mediaItems)
-                    player.prepare()
+                    internalPlayer?.let { player ->
+                        val mediaItems = _uiState.value.videoMoments.map { MediaItem.fromUri(it.videoUri) }
+                        player.setMediaItems(mediaItems)
+                        player.prepare()
+                    }
                 }
             })
             .build()
@@ -153,13 +213,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
         premergeTransformer!!.start(composition, cacheFile.absolutePath)
     }
 
-    private fun onPremergeReady(path: String) {
-        premergedVideoPath = path
-        player.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(path))))
-        player.prepare()
-    }
-
-    private fun setupPlayerListeners() {
+    private fun setupPlayerListeners(player: ExoPlayer) {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _uiState.update { it.copy(isPlaying = isPlaying) }
@@ -188,7 +242,8 @@ class GlueViewModel @OptIn(UnstableApi::class)
         progressJob?.cancel()
         progressJob = viewModelScope.launch {
             while (true) {
-                val currentPos = player.currentPosition
+                val p = internalPlayer ?: break
+                val currentPos = p.currentPosition
                 _currentTimeMs.value = currentPos
                 syncMusicPlayback(currentPos = currentPos, forceSeek = false)
                 delay(33)
@@ -201,6 +256,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
     }
 
     private fun syncMusicPlayback(currentPos: Long, forceSeek: Boolean = false) {
+        val mainPlayer = internalPlayer ?: return
         val state = _uiState.value
         val activeTrackIds = mutableSetOf<String>()
 
@@ -225,7 +281,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 if (forceSeek || drift > 200) {
                     musicPlayer.seekTo(targetMusicPos)
                 }
-                if (player.isPlaying && !musicPlayer.isPlaying) {
+                if (mainPlayer.isPlaying && !musicPlayer.isPlaying) {
                     musicPlayer.play()
                 }
             } else {
@@ -237,7 +293,6 @@ class GlueViewModel @OptIn(UnstableApi::class)
             if (id !in activeTrackIds && p.isPlaying) p.pause()
         }
     }
-
     private fun findFirstGap(
         existingTracks: List<AudioTrack>,
         neededDurationMs: Long,
@@ -444,15 +499,17 @@ class GlueViewModel @OptIn(UnstableApi::class)
         }
 
     fun onEvent(event: GlueEvent) {
+        val p = internalPlayer ?: return
+
         when (event) {
             is GlueEvent.TogglePlay -> {
-                if (player.isPlaying) {
-                    player.pause()
+                if (p.isPlaying) {
+                    p.pause()
                 } else {
-                    if (player.playbackState == Player.STATE_ENDED) {
-                        player.seekTo(0)
+                    if (p.playbackState == Player.STATE_ENDED) {
+                        p.seekTo(0)
                     }
-                    player.play()
+                    p.play()
                 }
             }
 
@@ -490,10 +547,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         endInTimelineMs = actualEnd
                     )
 
-                    val newPlayer = playerBuilderProvider.get().build().apply {
+                    val newMusicPlayer = playerBuilderProvider.get().build().apply {
                         repeatMode = Player.REPEAT_MODE_OFF
                     }
-                    musicPlayers[newTrack.id] = newPlayer
+                    musicPlayers[newTrack.id] = newMusicPlayer
 
                     _uiState.update { it.copy(audioTracks = it.audioTracks + newTrack) }
                 }
@@ -506,7 +563,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
             }
 
             is GlueEvent.OnSeekChanged -> {
-                player.seekTo(event.positionMs)
+                p.seekTo(event.positionMs)
                 _currentTimeMs.value = event.positionMs
                 syncMusicPlayback(currentPos = event.positionMs, forceSeek = true)
             }
@@ -530,7 +587,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         }
                     )
                 }
-                syncMusicPlayback(player.currentPosition, forceSeek = true)
+                syncMusicPlayback(p.currentPosition, forceSeek = true)
             }
 
             is GlueEvent.OnExportClicked -> {
@@ -541,14 +598,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
     @OptIn(UnstableApi::class)
     override fun onCleared() {
-        stopProgressTracking()
+        releasePlayers()
         premergeTransformer?.cancel()
         exportTransformer?.cancel()
-        player.release()
-        musicPlayers.values.forEach { it.release() }
-        musicPlayers.clear()
         premergedVideoPath?.let { File(it).delete() }
-        premergedVideoPath = null
         super.onCleared()
     }
 

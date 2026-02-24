@@ -146,6 +146,7 @@ fun NavigationRoot(
                             EditScreenRoute(
                                 videoUri = key.videoUri,
                                 date = key.date,
+                                navId = key.id,
                                 onBack = { backStack.removeLastOrNull() }
                             )
                         }

@@ -72,7 +72,7 @@ fun GlueScreen(
     currentTimeProvider: () -> Long,
     videoMoments: List<MomentEntity>,
     audioTracks: List<AudioTrack>,
-    player: Player,
+    player: Player?,
     isMerging: Boolean,
     isExporting: Boolean,
     exportSuccess: Boolean,
@@ -143,15 +143,22 @@ fun GlueScreen(
                     .clip(RoundedCornerShape(24.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            useController = false
-                            this.player = player
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (player != null) {
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                useController = false
+                                this.player = player
+                            }
+                        },
+                        update = { playerView ->
+                            playerView.player = player
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                }
 
                 if (isMerging) {
                     Box(

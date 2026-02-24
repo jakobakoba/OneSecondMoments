@@ -105,23 +105,26 @@ fun EditScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f),
+                .aspectRatio(16f / 9f)
+                .background(Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            AndroidView(
-                factory = { context ->
-                    PlayerView(context).apply {
-                        useController = false
-                        setKeepContentOnPlayerReset(true)
-                        setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        this.player = player
-                    }
-                },
-                update = { playerView ->
-                    playerView.player = player
-                },
-                modifier = Modifier.fillMaxSize()
-            )
+            if (player != null) {
+                AndroidView(
+                    factory = { context ->
+                        PlayerView(context).apply {
+                            useController = false
+                            setKeepContentOnPlayerReset(true)
+                            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            this.player = player
+                        }
+                    },
+                    update = { playerView ->
+                        playerView.player = player
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             if (state.dateText.isNotEmpty()) {
                 Text(
                     text = state.dateText,
