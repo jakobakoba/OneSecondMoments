@@ -106,10 +106,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
         val title = monthQuery ?: year?.toString() ?: "output"
         val cacheFile = File(context.cacheDir, "premerge_$title.mp4")
 
-        if (cacheFile.exists() && cacheFile.length() > 0) {
-            onPremergeReady(cacheFile.absolutePath)
-            return
-        }
+        if (cacheFile.exists()) cacheFile.delete()
 
         _uiState.update { it.copy(isMerging = true) }
 
@@ -327,19 +324,32 @@ class GlueViewModel @OptIn(UnstableApi::class)
             val audioSequenceItems = mutableListOf<EditedMediaItem>()
 
             if (track.startInTimelineMs > 0) {
+                val silentMixer = androidx.media3.common.audio.ChannelMixingAudioProcessor()
+                silentMixer.putChannelMixingMatrix(
+                    androidx.media3.common.audio.ChannelMixingMatrix(
+                        1, 1, floatArrayOf(0f)
+                    )
+                )
+                silentMixer.putChannelMixingMatrix(
+                    androidx.media3.common.audio.ChannelMixingMatrix(
+                        2, 2, floatArrayOf(0f, 0f, 0f, 0f)
+                    )
+                )
                 val silentClip = EditedMediaItem.Builder(
                     MediaItem.Builder()
-                        .setUri(Uri.fromFile(File(mergedPath)))
+                        .setUri(track.uri)
                         .setClippingConfiguration(
                             MediaItem.ClippingConfiguration.Builder()
-                                .setStartPositionMs(0)
-                                .setEndPositionMs(track.startInTimelineMs)
+                                .setStartPositionMs(track.trimStartMs)
+                                .setEndPositionMs(track.trimStartMs + track.startInTimelineMs)
                                 .build()
                         )
                         .build()
                 )
                     .setRemoveVideo(true)
-                    .setRemoveAudio(true)
+                    .setEffects(
+                        androidx.media3.transformer.Effects(listOf(silentMixer), emptyList())
+                    )
                     .build()
                 audioSequenceItems.add(silentClip)
             }
@@ -537,6 +547,8 @@ class GlueViewModel @OptIn(UnstableApi::class)
         player.release()
         musicPlayers.values.forEach { it.release() }
         musicPlayers.clear()
+        premergedVideoPath?.let { File(it).delete() }
+        premergedVideoPath = null
         super.onCleared()
     }
 
