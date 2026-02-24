@@ -80,7 +80,6 @@ fun GlueScreen(
     mergeProgress: Float,
     isExporting: Boolean,
     exportProgress: Float,
-    exportSuccess: Boolean,
     error: String?,
     onEvent: (GlueEvent) -> Unit,
     onBack: () -> Unit
@@ -325,18 +324,6 @@ fun GlueScreen(
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(text = error, color = Color.White, fontSize = 14.sp)
-            }
-        }
-
-        if (exportSuccess) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .background(Color(0xFF15803d), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Text(text = "Saved to gallery", color = Color.White, fontSize = 14.sp)
             }
         }
     }

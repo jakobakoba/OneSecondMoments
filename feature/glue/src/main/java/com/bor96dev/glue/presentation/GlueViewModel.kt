@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.annotation.OptIn
@@ -458,7 +459,8 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         val saved = saveToGallery(outputFile, title)
                         outputFile.delete()
                         if (saved) {
-                            _uiState.update { it.copy(isExporting = false, exportSuccess = true) }
+                            Toast.makeText(context, "Saved to gallery", Toast.LENGTH_LONG).show()
+                        _uiState.update { it.copy(isExporting = false) }
                         } else {
                             _uiState.update {
                                 it.copy(isExporting = false, error = "Failed to save to gallery")
