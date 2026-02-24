@@ -49,6 +49,7 @@ fun GlueScreenRoute(
         videoMoments = state.videoMoments,
         audioTracks = state.audioTracks,
         player = player,
+        isPlaying = state.isPlaying,
         isMerging = state.isMerging,
         isExporting = state.isExporting,
         exportSuccess = state.exportSuccess,
