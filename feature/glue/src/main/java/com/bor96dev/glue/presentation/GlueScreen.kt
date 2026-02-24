@@ -77,6 +77,7 @@ fun GlueScreen(
     player: Player?,
     isPlaying: Boolean,
     isMerging: Boolean,
+    mergeProgress: Float,
     isExporting: Boolean,
     exportSuccess: Boolean,
     error: String?,
@@ -177,7 +178,12 @@ fun GlueScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = Color.White)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Preparing preview...", color = Color.White, fontSize = 13.sp)
+                            val percent = (mergeProgress * 100).toInt()
+                            Text(
+                                text = if (percent > 0) "Preparing preview... $percent%" else "Preparing preview...",
+                                color = Color.White,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 } else if (!isPlaying) {

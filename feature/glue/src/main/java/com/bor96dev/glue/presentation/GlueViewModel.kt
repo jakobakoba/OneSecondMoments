@@ -20,6 +20,7 @@ import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import com.bor96dev.glue.domain.GlueRepository
 import com.bor96dev.glue.presentation.event.GlueEvent
@@ -65,6 +66,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
     private val musicPlayers = mutableMapOf<String, ExoPlayer>()
 
     private var progressJob: Job? = null
+    private var premergeProgressJob: Job? = null
     private var premergeTransformer: Transformer? = null
     private var exportTransformer: Transformer? = null
 
@@ -161,7 +163,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
         if (cacheFile.exists()) cacheFile.delete()
 
-        _uiState.update { it.copy(isMerging = true) }
+        _uiState.update { it.copy(isMerging = true, mergeProgress = 0f) }
 
         val editedItems = videoUris.map { uri ->
             EditedMediaItem.Builder(MediaItem.fromUri(uri))
@@ -211,6 +213,18 @@ class GlueViewModel @OptIn(UnstableApi::class)
             .build()
 
         premergeTransformer!!.start(composition, cacheFile.absolutePath)
+
+        premergeProgressJob?.cancel()
+        premergeProgressJob = viewModelScope.launch(Dispatchers.Main) {
+            val progressHolder = ProgressHolder()
+            while (_uiState.value.isMerging) {
+                val state = premergeTransformer?.getProgress(progressHolder)
+                if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    _uiState.update { it.copy(mergeProgress = progressHolder.progress / 100f) }
+                }
+                delay(200)
+            }
+        }
     }
 
     private fun setupPlayerListeners(player: ExoPlayer) {

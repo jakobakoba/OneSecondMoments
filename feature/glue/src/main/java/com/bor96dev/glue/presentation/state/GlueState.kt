@@ -11,6 +11,7 @@ data class GlueState(
     val totalDurationMs: Long = 0L,
     val isPlaying: Boolean = false,
     val isMerging: Boolean = false,
+    val mergeProgress: Float = 0f,
     val isExporting: Boolean = false,
     val exportSuccess: Boolean = false,
     val error: String? = null
