@@ -77,8 +77,9 @@ fun GlueScreen(
     player: Player?,
     isPlaying: Boolean,
     isMerging: Boolean,
+    mergeProgress: Float,
     isExporting: Boolean,
-    exportSuccess: Boolean,
+    exportProgress: Float,
     error: String?,
     onEvent: (GlueEvent) -> Unit,
     onBack: () -> Unit
@@ -177,7 +178,12 @@ fun GlueScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = Color.White)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Preparing preview...", color = Color.White, fontSize = 13.sp)
+                            val percent = (mergeProgress * 100).toInt()
+                            Text(
+                                text = if (percent > 0) "Preparing preview... $percent%" else "Preparing preview...",
+                                color = Color.White,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 } else if (!isPlaying) {
@@ -277,7 +283,7 @@ fun GlueScreen(
                 Button(
                     onClick = { galleryLauncher.launch("audio/*") },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = audioTracks.size < 5,
+                    enabled = audioTracks.size < 5 && !isMerging,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -298,8 +304,9 @@ fun GlueScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color.White)
                     Spacer(modifier = Modifier.height(12.dp))
+                    val percent = (exportProgress * 100).toInt()
                     Text(
-                        "Exporting...",
+                        text = if (percent > 0) "Exporting... $percent%" else "Exporting...",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -317,18 +324,6 @@ fun GlueScreen(
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(text = error, color = Color.White, fontSize = 14.sp)
-            }
-        }
-
-        if (exportSuccess) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .background(Color(0xFF15803d), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Text(text = "Saved to gallery", color = Color.White, fontSize = 14.sp)
             }
         }
     }

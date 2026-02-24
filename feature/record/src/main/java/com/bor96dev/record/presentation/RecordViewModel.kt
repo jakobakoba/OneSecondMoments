@@ -85,10 +85,6 @@ class RecordViewModel @Inject constructor(
         recordingJob = viewModelScope.launch {
             delay(1000)
             _uiState.update { it.copy(canStop = true) }
-            delay(14000)
-            if (_uiState.value.isRecording) {
-                stopRecording()
-            }
         }
     }
 

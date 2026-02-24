@@ -51,8 +51,9 @@ fun GlueScreenRoute(
         player = player,
         isPlaying = state.isPlaying,
         isMerging = state.isMerging,
+        mergeProgress = state.mergeProgress,
         isExporting = state.isExporting,
-        exportSuccess = state.exportSuccess,
+        exportProgress = state.exportProgress,
         error = state.error,
         onEvent = viewModel::onEvent,
         onBack = onBack
