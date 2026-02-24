@@ -22,7 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -46,26 +52,47 @@ fun VideoPreviewSection(
     onReplace: () -> Unit
 ) {
     val context = LocalContext.current
-    val player = remember {
-        ExoPlayer.Builder(context).build().apply {
-            repeatMode = Player.REPEAT_MODE_ONE
-        }
-    }
+    var player by remember { mutableStateOf<ExoPlayer?>(null) }
 
-    DisposableEffect(Unit) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> {
+                    if (player == null) {
+                        player = ExoPlayer.Builder(context).build().apply {
+                            repeatMode = Player.REPEAT_MODE_ONE
+                        }
+                    }
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    player?.release()
+                    player = null
+                }
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
         onDispose {
-            player.release()
+            lifecycle.removeObserver(observer)
+            player?.release()
+            player = null
         }
     }
 
-    LaunchedEffect(moment) {
-        if (moment != null){
-            player.setMediaItem(MediaItem.fromUri(moment.videoUri))
-            player.prepare()
-            player.play()
+    LaunchedEffect(moment, player) {
+        val currentPlayer = player ?: return@LaunchedEffect
+
+        if (moment != null) {
+            val mediaItem = MediaItem.fromUri(moment.videoUri)
+            if (currentPlayer.currentMediaItem?.localConfiguration?.uri != mediaItem.localConfiguration?.uri) {
+                currentPlayer.setMediaItem(mediaItem)
+                currentPlayer.prepare()
+            }
+            currentPlayer.play()
         } else {
-            player.stop()
-            player.clearMediaItems()
+            currentPlayer.stop()
+            currentPlayer.clearMediaItems()
         }
     }
 
@@ -82,15 +109,22 @@ fun VideoPreviewSection(
             contentAlignment = Alignment.Center
         ) {
             if (moment != null){
-                AndroidView(
-                    factory = {ctx ->
-                        PlayerView(ctx).apply {
-                            useController = false
-                            this.player = player
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                if (player != null) {
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                useController = false
+                                // Важно: устанавливаем плеер
+                                this.player = player
+                            }
+                        },
+                        update = { playerView ->
+                            // Обновляем плеер при рекомпозиции
+                            playerView.player = player
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             } else {
                 IconButton(
                     onClick = onReplace,

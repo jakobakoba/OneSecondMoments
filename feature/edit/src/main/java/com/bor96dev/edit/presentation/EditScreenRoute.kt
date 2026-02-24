@@ -1,9 +1,13 @@
 package com.bor96dev.edit.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bor96dev.edit.presentation.event.EditEvent
 
@@ -21,6 +25,20 @@ fun EditScreenRoute(
     }
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val player by viewModel.playerFlow.collectAsStateWithLifecycle()
+
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> viewModel.onStart()
+                Lifecycle.Event.ON_STOP -> viewModel.onStop()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(state.saveCompleted){
         if (state.saveCompleted){
@@ -30,7 +48,7 @@ fun EditScreenRoute(
 
     EditScreen(
         state = state,
-        player = viewModel.player,
+        player = player,
         onEvent = { event ->
             if (event is EditEvent.OnBackClicked){
                 onBack()

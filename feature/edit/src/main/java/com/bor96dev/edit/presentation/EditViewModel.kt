@@ -60,7 +60,7 @@ class EditViewModel @UnstableApi
     @Assisted private val date: Long,
     @ApplicationContext private val context: Context,
     private val momentsDao: MomentsDao,
-    playerBuilder: ExoPlayer.Builder
+    private val playerBuilder: ExoPlayer.Builder
 ) : ViewModel() {
 
     @AssistedFactory
@@ -71,28 +71,45 @@ class EditViewModel @UnstableApi
     private val _uiState = MutableStateFlow(EditState(dateText = date.toFormattedDateString()))
     val uiState = _uiState.asStateFlow()
 
-    val player: Player = playerBuilder.build()
+    private var internalPlayer: ExoPlayer? = null
+    private val _playerFlow = MutableStateFlow<Player?>(null)
+    val playerFlow = _playerFlow.asStateFlow()
+
+    private var savedPositionMs: Long = 0L
 
     init {
-
-        Log.d("GTA5", "loading video: $videoUri")
-
-        player.repeatMode = Player.REPEAT_MODE_OFF
-        if (player is ExoPlayer) {
-            player.setSeekParameters(SeekParameters.EXACT)
-        }
-        player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _uiState.update { it.copy(isPlaying = isPlaying) }
-            }
-        })
-
         val uri = videoUri.toUri()
         _uiState.update { it.copy(videoUri = uri) }
-        setupInitialPlayer(uri)
     }
 
-    private fun setupInitialPlayer(uri: Uri) {
+    @OptIn(UnstableApi::class)
+    fun onStart() {
+        if (internalPlayer != null) return
+        val player = playerBuilder.build().apply {
+            repeatMode = Player.REPEAT_MODE_OFF
+            setSeekParameters(SeekParameters.EXACT)
+            addListener(object : Player.Listener {
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    _uiState.update { it.copy(isPlaying = isPlaying) }
+                }
+            })
+        }
+        internalPlayer = player
+        _playerFlow.value = player
+        setupInitialPlayer(player, videoUri.toUri())
+    }
+
+    fun onStop() {
+        internalPlayer?.let {
+            savedPositionMs = it.currentPosition
+            it.stop()
+            it.release()
+        }
+        internalPlayer = null
+        _playerFlow.value = null
+    }
+
+    private fun setupInitialPlayer(player: ExoPlayer, uri: Uri) {
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
@@ -103,6 +120,7 @@ class EditViewModel @UnstableApi
         })
         player.setMediaItem(MediaItem.fromUri(uri))
         player.prepare()
+        if (savedPositionMs > 0) player.seekTo(savedPositionMs)
     }
 
     @OptIn(UnstableApi::class)
@@ -190,20 +208,32 @@ class EditViewModel @UnstableApi
             is EditEvent.OnSeekChanged -> {
                 _uiState.update { it.copy(selectedStartMs = event.positionMs) }
 
+                val player = internalPlayer ?: return
+                val uri = _uiState.value.videoUri ?: return
                 val currentMediaItem = player.currentMediaItem
-                val isClipped = currentMediaItem?.clippingConfiguration?.startPositionMs != 0L
+                val isClipped = currentMediaItem?.clippingConfiguration?.endPositionMs
+                    ?.let { it != androidx.media3.common.C.TIME_END_OF_SOURCE } ?: false
 
                 if (isClipped) {
-                    _uiState.value.videoUri?.let { uri ->
-                        player.setMediaItem(MediaItem.fromUri(uri))
-                        player.prepare()
-                    }
+                    player.addListener(object : Player.Listener {
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_READY) {
+                                player.pause()
+                                player.seekTo(event.positionMs)
+                                player.removeListener(this)
+                            }
+                        }
+                    })
+                    player.setMediaItem(MediaItem.fromUri(uri))
+                    player.prepare()
+                } else {
+                    player.pause()
+                    player.seekTo(event.positionMs)
                 }
-                player.pause()
-                player.seekTo(event.positionMs)
             }
 
             is EditEvent.TogglePlay -> {
+                val player = internalPlayer ?: return
                 val uri = _uiState.value.videoUri ?: return
                 val startMs = _uiState.value.selectedStartMs
 
@@ -252,7 +282,7 @@ class EditViewModel @UnstableApi
 
     override fun onCleared() {
         super.onCleared()
-        player.release()
+        onStop()
     }
 }
 
