@@ -122,16 +122,15 @@ fun RecordScreen(
     Box(modifier = Modifier.fillMaxSize())
     {
         if (state.hasPermissions) {
+            val preview = state.videoPreview
             AndroidView(
                 factory = { ctx ->
                     PreviewView(ctx).apply {
                         scaleType = PreviewView.ScaleType.FILL_CENTER
+                        preview?.setSurfaceProvider(surfaceProvider)
                     }
                 },
-                modifier = Modifier.fillMaxSize(),
-                update = { previewView ->
-                    state.videoPreview?.setSurfaceProvider(previewView.surfaceProvider)
-                }
+                modifier = Modifier.fillMaxSize()
             )
         }
 
