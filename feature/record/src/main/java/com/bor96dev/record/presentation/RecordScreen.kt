@@ -168,31 +168,33 @@ fun RecordScreen(
                 .align(Alignment.BottomCenter)
                 .padding(horizontal = 24.dp, vertical = 32.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.Center)
-                    .graphicsLayer {
-                        alpha =
-                            if (state.isProcessing || (state.isRecording && !state.canStop)) 0.5f else 1f
-                    }
-                    .background(
-                        color = if (state.isRecording) Color.Red else Color.White,
-                        shape = CircleShape
-                    )
-                    .clickable(
-                        enabled = state.isLandscape && !state.isProcessing && state.lastRecordedUri == null && (!state.isRecording || state.canStop)
-                    ) { viewModel.onEvent(RecordEvent.ToggleRecording) },
-                contentAlignment = Alignment.Center
-            ) {
+            if (state.isLandscape) {
                 Box(
                     modifier = Modifier
-                        .size(if (state.isRecording) 32.dp else 60.dp)
+                        .size(80.dp)
+                        .align(Alignment.Center)
+                        .graphicsLayer {
+                            alpha =
+                                if (state.isProcessing || (state.isRecording && !state.canStop)) 0.5f else 1f
+                        }
                         .background(
-                            color = if (state.isRecording) Color.Black else Color.Red,
-                            shape = if (state.isRecording) RoundedCornerShape(8.dp) else CircleShape
+                            color = if (state.isRecording) Color.Red else Color.White,
+                            shape = CircleShape
                         )
-                )
+                        .clickable(
+                            enabled = !state.isProcessing && state.lastRecordedUri == null && (!state.isRecording || state.canStop)
+                        ) { viewModel.onEvent(RecordEvent.ToggleRecording) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(if (state.isRecording) 32.dp else 60.dp)
+                            .background(
+                                color = if (state.isRecording) Color.Black else Color.Red,
+                                shape = if (state.isRecording) RoundedCornerShape(8.dp) else CircleShape
+                            )
+                    )
+                }
             }
 
             Box(
