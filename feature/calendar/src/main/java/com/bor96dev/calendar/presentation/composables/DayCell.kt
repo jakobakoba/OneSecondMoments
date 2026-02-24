@@ -48,7 +48,7 @@ fun DayCell(
                     }
                 )
                 .then(
-                    if (isSelected) Modifier.border(2.dp, Color.White, CircleShape)
+                    if (isSelected) Modifier.border(2.dp, Color.Red, CircleShape)
                     else Modifier
                 )
                 .clickable(
