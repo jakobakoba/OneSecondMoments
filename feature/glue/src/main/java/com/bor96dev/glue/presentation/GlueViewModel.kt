@@ -40,7 +40,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Provider
-import kotlin.math.abs
 
 @UnstableApi
 @HiltViewModel(assistedFactory = GlueViewModel.Factory::class)
@@ -202,7 +201,8 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         )
                     }
                     internalPlayer?.let { player ->
-                        val mediaItems = _uiState.value.videoMoments.map { MediaItem.fromUri(it.videoUri) }
+                        val mediaItems =
+                            _uiState.value.videoMoments.map { MediaItem.fromUri(it.videoUri) }
                         player.setMediaItems(mediaItems)
                         player.prepare()
                     }
@@ -276,13 +276,15 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 if (musicPlayer.playbackState == Player.STATE_BUFFERING) continue
 
                 val targetMusicPos = track.trimStartMs + (currentPos - track.startInTimelineMs)
-                val drift = abs(musicPlayer.currentPosition - targetMusicPos)
 
-                if (forceSeek || drift > 200) {
+                if (forceSeek) {
                     musicPlayer.seekTo(targetMusicPos)
-                }
-                if (mainPlayer.isPlaying && !musicPlayer.isPlaying) {
-                    musicPlayer.play()
+                    if (mainPlayer.isPlaying) {
+                        musicPlayer.playWhenReady = true
+                    }
+                } else if (!musicPlayer.isPlaying && mainPlayer.isPlaying) {
+                    musicPlayer.seekTo(targetMusicPos)
+                    musicPlayer.playWhenReady = true
                 }
             } else {
                 if (musicPlayer.isPlaying) musicPlayer.pause()
@@ -293,6 +295,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
             if (id !in activeTrackIds && p.isPlaying) p.pause()
         }
     }
+
     private fun findFirstGap(
         existingTracks: List<AudioTrack>,
         neededDurationMs: Long,
@@ -455,7 +458,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                     exportException: ExportException
                 ) {
                     _uiState.update {
-                        it.copy(isExporting = false, error = "Export failed: ${exportException.message}")
+                        it.copy(
+                            isExporting = false,
+                            error = "Export failed: ${exportException.message}"
+                        )
                     }
                 }
             })
@@ -537,7 +543,8 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
                     val gapStart = findFirstGap(state.audioTracks, clampedDuration, totalDur)
                     val desiredEnd = gapStart + clampedDuration
-                    val actualEnd = clampedEndForGap(gapStart, state.audioTracks, desiredEnd, totalDur)
+                    val actualEnd =
+                        clampedEndForGap(gapStart, state.audioTracks, desiredEnd, totalDur)
 
                     val newTrack = AudioTrack(
                         uri = event.uri,
