@@ -114,12 +114,10 @@ fun VideoPreviewSection(
                         factory = { ctx ->
                             PlayerView(ctx).apply {
                                 useController = false
-                                // Важно: устанавливаем плеер
                                 this.player = player
                             }
                         },
                         update = { playerView ->
-                            // Обновляем плеер при рекомпозиции
                             playerView.player = player
                         },
                         modifier = Modifier.fillMaxSize()
@@ -178,12 +176,7 @@ fun VideoPreviewSection(
                         )
                     }
                 }
-
             }
-
         }
-
     }
-
-
 }
