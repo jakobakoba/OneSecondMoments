@@ -93,8 +93,6 @@ class EditViewModel @UnstableApi
     }
 
     private fun setupInitialPlayer(uri: Uri) {
-        player.setMediaItem(MediaItem.fromUri(uri))
-        player.prepare()
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
@@ -103,6 +101,8 @@ class EditViewModel @UnstableApi
                 }
             }
         })
+        player.setMediaItem(MediaItem.fromUri(uri))
+        player.prepare()
     }
 
     @OptIn(UnstableApi::class)
