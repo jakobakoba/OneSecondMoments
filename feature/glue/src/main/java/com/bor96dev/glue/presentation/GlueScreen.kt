@@ -79,6 +79,7 @@ fun GlueScreen(
     isMerging: Boolean,
     mergeProgress: Float,
     isExporting: Boolean,
+    exportProgress: Float,
     exportSuccess: Boolean,
     error: String?,
     onEvent: (GlueEvent) -> Unit,
@@ -304,8 +305,9 @@ fun GlueScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Color.White)
                     Spacer(modifier = Modifier.height(12.dp))
+                    val percent = (exportProgress * 100).toInt()
                     Text(
-                        "Exporting...",
+                        text = if (percent > 0) "Exporting... $percent%" else "Exporting...",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold

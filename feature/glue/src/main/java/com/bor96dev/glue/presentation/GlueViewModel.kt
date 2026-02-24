@@ -67,6 +67,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
     private var progressJob: Job? = null
     private var premergeProgressJob: Job? = null
+    private var exportProgressJob: Job? = null
     private var premergeTransformer: Transformer? = null
     private var exportTransformer: Transformer? = null
 
@@ -373,7 +374,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
             return
         }
 
-        _uiState.update { it.copy(isExporting = true, error = null) }
+        _uiState.update { it.copy(isExporting = true, exportProgress = 0f, error = null) }
 
         val state = _uiState.value
         val title = state.title
@@ -482,6 +483,18 @@ class GlueViewModel @OptIn(UnstableApi::class)
             .build()
 
         exportTransformer!!.start(composition, outputFile.absolutePath)
+
+        exportProgressJob?.cancel()
+        exportProgressJob = viewModelScope.launch(Dispatchers.Main) {
+            val progressHolder = ProgressHolder()
+            while (_uiState.value.isExporting) {
+                val state = exportTransformer?.getProgress(progressHolder)
+                if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    _uiState.update { it.copy(exportProgress = progressHolder.progress / 100f) }
+                }
+                delay(200)
+            }
+        }
     }
 
     private suspend fun saveToGallery(file: File, title: String): Boolean =

@@ -13,6 +13,7 @@ data class GlueState(
     val isMerging: Boolean = false,
     val mergeProgress: Float = 0f,
     val isExporting: Boolean = false,
+    val exportProgress: Float = 0f,
     val exportSuccess: Boolean = false,
     val error: String? = null
 )
