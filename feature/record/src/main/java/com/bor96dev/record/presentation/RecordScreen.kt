@@ -148,13 +148,15 @@ fun RecordScreen(
                     Icon(
                         painter = painterResource(id = R.drawable.rotate),
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp)
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Red
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Rotate to Landscape",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red
                     )
                 }
             }
