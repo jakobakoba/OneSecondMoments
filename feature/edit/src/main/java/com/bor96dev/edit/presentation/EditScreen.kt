@@ -148,30 +148,16 @@ fun EditScreen(
                 text = "Total: ${"%.1f".format(state.videoDurationMs / 1000f)}s",
                 fontSize = 14.sp
             )
-            Text(
-                text = "Selected: 1.0s",
-                fontSize = 14.sp
-            )
         }
         Spacer(modifier = Modifier.weight(1f))
 
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Select 1 second clip",
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = "${"%.1f".format(state.selectedStartMs / 1000f)}s",
-                    fontSize = 14.sp
-                )
-            }
+            Text(
+                text = "Choose the moment: ",
+                fontSize = 14.sp
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
