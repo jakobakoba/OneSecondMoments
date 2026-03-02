@@ -34,6 +34,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -128,12 +129,18 @@ fun GlueScreen(
                 Button(
                     onClick = { onEvent(GlueEvent.OnExportClicked) },
                     enabled = !isMerging && !isExporting,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF22c55e),
+                        disabledContainerColor = Color.DarkGray,
+                        contentColor = Color.White,
+                        disabledContentColor = Color.White.copy(alpha = 0.5f)
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = "Export",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = LocalContentColor.current
                     )
                 }
             }
@@ -165,7 +172,11 @@ fun GlueScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                    )
                 }
 
                 if (isMerging) {
@@ -284,12 +295,20 @@ fun GlueScreen(
                     onClick = { galleryLauncher.launch("audio/*") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = audioTracks.size < 5 && !isMerging,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7c3aed)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7c3aed),
+                        contentColor = Color.White,
+                        disabledContentColor = Color.White.copy(alpha = 0.5f)
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = null,
+                        tint = LocalContentColor.current
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Music")
+                    Text("Add Music", color = LocalContentColor.current)
                 }
             }
         }
