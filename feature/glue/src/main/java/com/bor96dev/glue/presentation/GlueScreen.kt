@@ -82,6 +82,7 @@ fun GlueScreen(
     isExporting: Boolean,
     exportProgress: Float,
     error: String?,
+    hasSpaceForNewAudio: Boolean,
     onEvent: (GlueEvent) -> Unit,
     onBack: () -> Unit
 ) {
@@ -294,7 +295,7 @@ fun GlueScreen(
                 Button(
                     onClick = { galleryLauncher.launch("audio/*") },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = audioTracks.size < 5 && !isMerging,
+                    enabled = audioTracks.size < 5 && !isMerging && hasSpaceForNewAudio,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF7c3aed),
                         contentColor = Color.White,
@@ -308,7 +309,7 @@ fun GlueScreen(
                         tint = LocalContentColor.current
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add Music", color = LocalContentColor.current)
+                    Text(text = if (hasSpaceForNewAudio) "Add Music" else "No space left", color = LocalContentColor.current)
                 }
             }
         }
