@@ -509,13 +509,25 @@ class GlueViewModel @OptIn(UnstableApi::class)
     private suspend fun saveToGallery(file: File, title: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    val moviesDir = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+                        "OneSecondMoments"
+                    )
+                    if (!moviesDir.exists()) {
+                        moviesDir.mkdirs()
+                    }
+                }
                 val resolver = context.contentResolver
                 val fileName = "OneSecondMoments_${title}_${System.currentTimeMillis()}.mp4"
 
                 val values = ContentValues().apply {
                     put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
                     put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                    put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES)
+                    put(
+                        MediaStore.Video.Media.RELATIVE_PATH,
+                        "${Environment.DIRECTORY_MOVIES}/OneSecondMoments"
+                    )
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         put(MediaStore.Video.Media.IS_PENDING, 1)
                     }
