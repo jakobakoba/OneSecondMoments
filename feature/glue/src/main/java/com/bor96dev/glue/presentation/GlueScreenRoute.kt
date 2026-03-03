@@ -29,6 +29,9 @@ fun GlueScreenRoute(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
     DisposableEffect(lifecycle) {
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            viewModel.onStart()
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> viewModel.onStart()
@@ -38,6 +41,7 @@ fun GlueScreenRoute(
         }
         lifecycle.addObserver(observer)
         onDispose {
+            viewModel.onStop()
             lifecycle.removeObserver(observer)
         }
     }
