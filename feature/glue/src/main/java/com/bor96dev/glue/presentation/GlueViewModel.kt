@@ -2,12 +2,13 @@ package com.bor96dev.glue.presentation
 
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
-import android.widget.Toast
 import android.os.Environment
 import android.provider.MediaStore
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -155,7 +156,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 }
                 _uiState.update { state ->
                     state.copy(
-                        hasSpaceForNewAudio = hasSpaceForNewAudio(state.audioTracks, state.totalDurationMs)
+                        hasSpaceForNewAudio = hasSpaceForNewAudio(
+                            state.audioTracks,
+                            state.totalDurationMs
+                        )
                     )
                 }
                 startPremerge(moments.map { it.videoUri })
@@ -463,14 +467,18 @@ class GlueViewModel @OptIn(UnstableApi::class)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     viewModelScope.launch {
-                        val saved = saveToGallery(outputFile, title)
+                        val savedUri = saveToGallery(outputFile, title)
                         outputFile.delete()
-                        if (saved) {
+                        if (savedUri != null) {
                             Toast.makeText(context, "Saved to gallery", Toast.LENGTH_LONG).show()
-                        _uiState.update { it.copy(isExporting = false) }
+                            launchVideoViewer(savedUri)
+                            _uiState.update { it.copy(isExporting = false) }
                         } else {
                             _uiState.update {
-                                it.copy(isExporting = false, error = "Failed to save to gallery")
+                                it.copy(
+                                    isExporting = false,
+                                    error = "Failed to save to gallery"
+                                )
                             }
                         }
                     }
@@ -506,23 +514,39 @@ class GlueViewModel @OptIn(UnstableApi::class)
         }
     }
 
-    private suspend fun saveToGallery(file: File, title: String): Boolean =
+    private suspend fun saveToGallery(file: File, title: String): Uri? =
         withContext(Dispatchers.IO) {
             try {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                    val moviesDir = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES),
+                        "OneSecondMoments"
+                    )
+                    if (!moviesDir.exists()) {
+                        moviesDir.mkdirs()
+                    }
+                }
+
                 val resolver = context.contentResolver
                 val fileName = "OneSecondMoments_${title}_${System.currentTimeMillis()}.mp4"
-
+                val nowMs = System.currentTimeMillis()
                 val values = ContentValues().apply {
                     put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
                     put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                    put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES)
+                    put(
+                        MediaStore.Video.Media.RELATIVE_PATH,
+                        "${Environment.DIRECTORY_MOVIES}/OneSecondMoments"
+                    )
+                    put(MediaStore.Video.Media.DATE_TAKEN, nowMs)
+                    put(MediaStore.Video.Media.DATE_ADDED, nowMs / 1000)
+                    put(MediaStore.Video.Media.DATE_MODIFIED, nowMs / 1000)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                         put(MediaStore.Video.Media.IS_PENDING, 1)
                     }
                 }
 
                 val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                    ?: return@withContext false
+                    ?: return@withContext null
 
                 resolver.openOutputStream(uri)?.use { out ->
                     file.inputStream().use { it.copyTo(out) }
@@ -534,9 +558,9 @@ class GlueViewModel @OptIn(UnstableApi::class)
                     resolver.update(uri, values, null, null)
                 }
 
-                true
+                uri
             } catch (_: Exception) {
-                false
+                null
             }
         }
 
@@ -599,7 +623,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         val updatedTracks = it.audioTracks + newTrack
                         it.copy(
                             audioTracks = updatedTracks,
-                            hasSpaceForNewAudio = hasSpaceForNewAudio(updatedTracks, it.totalDurationMs)
+                            hasSpaceForNewAudio = hasSpaceForNewAudio(
+                                updatedTracks,
+                                it.totalDurationMs
+                            )
                         )
                     }
                 }
@@ -643,7 +670,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         }
                         state.copy(
                             audioTracks = updatedTracks,
-                            hasSpaceForNewAudio = hasSpaceForNewAudio(updatedTracks, state.totalDurationMs)
+                            hasSpaceForNewAudio = hasSpaceForNewAudio(
+                                updatedTracks,
+                                state.totalDurationMs
+                            )
                         )
                     }
                 }
@@ -651,17 +681,36 @@ class GlueViewModel @OptIn(UnstableApi::class)
             }
 
             is GlueEvent.OnExportClicked -> {
+                stopPlayback()
                 doExport()
             }
         }
     }
 
+    private fun stopPlayback() {
+        internalPlayer?.let {
+            if (it.isPlaying) it.pause()
+        }
+        musicPlayers.values.forEach {
+            if (it.isPlaying) it.pause()
+        }
+        _uiState.update { it.copy(isPlaying = false) }
+    }
+
+    private fun launchVideoViewer(uri: Uri) {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, "video/mp4")
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    }
+
     private fun hasSpaceForNewAudio(tracks: List<AudioTrack>, totalDurationMs: Long): Boolean {
         if (totalDurationMs <= 0) return false
-        val sorted = tracks.sortedBy {it.startInTimelineMs}
+        val sorted = tracks.sortedBy { it.startInTimelineMs }
         var prevEnd = 0L
-        for (track in sorted){
-            if (track.startInTimelineMs - prevEnd >= MIN_AUDIO_DURATION_MS){
+        for (track in sorted) {
+            if (track.startInTimelineMs - prevEnd >= MIN_AUDIO_DURATION_MS) {
                 return true
             }
             prevEnd = track.endInTimelineMs
