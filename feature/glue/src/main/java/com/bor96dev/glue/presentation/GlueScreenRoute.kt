@@ -55,6 +55,7 @@ fun GlueScreenRoute(
         isExporting = state.isExporting,
         exportProgress = state.exportProgress,
         error = state.error,
+        hasSpaceForNewAudio = state.hasSpaceForNewAudio,
         onEvent = viewModel::onEvent,
         onBack = onBack
     )

@@ -14,7 +14,8 @@ data class GlueState(
     val mergeProgress: Float = 0f,
     val isExporting: Boolean = false,
     val exportProgress: Float = 0f,
-    val error: String? = null
+    val error: String? = null,
+    val hasSpaceForNewAudio: Boolean = true
 )
 
 data class AudioTrack(

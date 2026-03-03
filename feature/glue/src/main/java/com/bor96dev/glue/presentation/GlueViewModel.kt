@@ -43,6 +43,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Provider
 
+private const val MIN_AUDIO_DURATION_MS = 2000L
+
 @UnstableApi
 @HiltViewModel(assistedFactory = GlueViewModel.Factory::class)
 class GlueViewModel @OptIn(UnstableApi::class)
@@ -149,6 +151,11 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         videoMoments = moments,
                         totalDurationMs = moments.size * 1000L,
                         title = monthQuery ?: year?.toString() ?: ""
+                    )
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        hasSpaceForNewAudio = hasSpaceForNewAudio(state.audioTracks, state.totalDurationMs)
                     )
                 }
                 startPremerge(moments.map { it.videoUri })
@@ -588,14 +595,26 @@ class GlueViewModel @OptIn(UnstableApi::class)
                     }
                     musicPlayers[newTrack.id] = newMusicPlayer
 
-                    _uiState.update { it.copy(audioTracks = it.audioTracks + newTrack) }
+                    _uiState.update {
+                        val updatedTracks = it.audioTracks + newTrack
+                        it.copy(
+                            audioTracks = updatedTracks,
+                            hasSpaceForNewAudio = hasSpaceForNewAudio(updatedTracks, it.totalDurationMs)
+                        )
+                    }
                 }
             }
 
             is GlueEvent.OnAudioRemoved -> {
                 musicPlayers[event.trackId]?.release()
                 musicPlayers.remove(event.trackId)
-                _uiState.update { it.copy(audioTracks = it.audioTracks.filter { t -> t.id != event.trackId }) }
+                _uiState.update {
+                    val updatedTracks = it.audioTracks.filter { t -> t.id != event.trackId }
+                    it.copy(
+                        audioTracks = updatedTracks,
+                        hasSpaceForNewAudio = hasSpaceForNewAudio(updatedTracks, it.totalDurationMs)
+                    )
+                }
             }
 
             is GlueEvent.OnSeekChanged -> {
@@ -610,9 +629,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                     val wouldOverlap = otherTracks.any { other ->
                         event.startMs < other.endInTimelineMs && event.endMs > other.startInTimelineMs
                     }
-                    if (wouldOverlap) state
-                    else state.copy(
-                        audioTracks = state.audioTracks.map { track ->
+                    if (wouldOverlap) {
+                        state
+                    } else {
+                        val updatedTracks = state.audioTracks.map { track ->
                             if (track.id == event.trackId) {
                                 track.copy(
                                     startInTimelineMs = event.startMs,
@@ -621,7 +641,11 @@ class GlueViewModel @OptIn(UnstableApi::class)
                                 )
                             } else track
                         }
-                    )
+                        state.copy(
+                            audioTracks = updatedTracks,
+                            hasSpaceForNewAudio = hasSpaceForNewAudio(updatedTracks, state.totalDurationMs)
+                        )
+                    }
                 }
                 syncMusicPlayback(p.currentPosition, forceSeek = true)
             }
@@ -630,6 +654,19 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 doExport()
             }
         }
+    }
+
+    private fun hasSpaceForNewAudio(tracks: List<AudioTrack>, totalDurationMs: Long): Boolean {
+        if (totalDurationMs <= 0) return false
+        val sorted = tracks.sortedBy {it.startInTimelineMs}
+        var prevEnd = 0L
+        for (track in sorted){
+            if (track.startInTimelineMs - prevEnd >= MIN_AUDIO_DURATION_MS){
+                return true
+            }
+            prevEnd = track.endInTimelineMs
+        }
+        return totalDurationMs - prevEnd >= MIN_AUDIO_DURATION_MS
     }
 
     @OptIn(UnstableApi::class)
