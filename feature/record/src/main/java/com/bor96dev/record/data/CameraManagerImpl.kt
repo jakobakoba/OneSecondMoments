@@ -95,6 +95,11 @@ class CameraManagerImpl @Inject constructor(
         videoCapture.targetRotation = rotation
     }
 
+    override suspend fun unbind() {
+        val cameraProvider = ProcessCameraProvider.getInstance(context).await()
+        cameraProvider.unbindAll()
+    }
+
     override suspend fun bindToLifecycle(
         lifecycleOwner: LifecycleOwner,
         vararg useCases: UseCase

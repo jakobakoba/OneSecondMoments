@@ -56,6 +56,11 @@ fun VideoPreviewSection(
 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) && player == null) {
+            player = ExoPlayer.Builder(context).build().apply {
+                repeatMode = Player.REPEAT_MODE_ONE
+            }
+        }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> {

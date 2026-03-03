@@ -144,4 +144,11 @@ class RecordViewModel @Inject constructor(
             cameraManager.bindToLifecycle(lifecycleOwner, preview)
         }
     }
+
+    fun onStop() {
+        cameraManager.stopRecording()
+        viewModelScope.launch {
+            cameraManager.unbind()
+        }
+    }
 }
