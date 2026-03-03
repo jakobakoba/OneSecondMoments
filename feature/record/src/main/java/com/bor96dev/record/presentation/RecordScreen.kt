@@ -41,6 +41,8 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.bor96dev.record.presentation.event.RecordEvent
 import com.bor96dev.ui.R
 
@@ -87,6 +89,26 @@ fun RecordScreen(
     LaunchedEffect(state.hasPermissions) {
         if (state.hasPermissions) {
             viewModel.bindCamera(lifecycleOwner)
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, state.hasPermissions) {
+        val lifecycle = lifecycleOwner.lifecycle
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> {
+                    if (state.hasPermissions) {
+                        viewModel.bindCamera(lifecycleOwner)
+                    }
+                }
+                Lifecycle.Event.ON_STOP -> viewModel.onStop()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            viewModel.onStop()
         }
     }
 

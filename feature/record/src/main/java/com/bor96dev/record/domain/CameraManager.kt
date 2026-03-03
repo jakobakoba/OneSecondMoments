@@ -14,6 +14,7 @@ interface CameraManager {
     fun startRecording()
     fun stopRecording()
     fun setTargetRotation(rotation: Int)
+    suspend fun unbind()
     suspend fun bindToLifecycle(
         lifecycleOwner: LifecycleOwner,
         vararg useCases: UseCase

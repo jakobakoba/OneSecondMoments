@@ -1,8 +1,14 @@
 package com.bor96dev.onesecondmoments.navigation
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -12,10 +18,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
 import com.bor96dev.calendar.presentation.CalendarScreen
 import com.bor96dev.edit.presentation.EditScreenRoute
@@ -103,70 +107,80 @@ fun NavigationRoot(
             }
         }
     ) { padding ->
-        NavDisplay(
-            modifier = Modifier.padding(padding),
-            backStack = backStack,
-            entryProvider = { key ->
-                when (key) {
-                    is Route.Record -> {
-                        NavEntry(key) {
-                            RecordScreen(
-                                onVideoRecorded = { uri, date ->
-                                    backStack.add(Route.Edit(uri.toString(), date))
-                                }
-                            )
-                        }
-                    }
+        val currentRoute = backStack.last()
 
-                    is Route.Montage -> {
-                        NavEntry(key) {
-                            MontageScreen(
-                                onNavigateToGlue = { month, year ->
-                                    backStack.add(Route.Glue(monthQuery = month, year = year))
-                                }
-                            )
-                        }
-                    }
-
-                    is Route.Calendar -> {
-                        NavEntry(key) {
-                            CalendarScreen(
-                                onNavigateToRecord = {
-                                    backStack.add(Route.Record)
-                                },
-                                onNavigateToEdit = { uri, date ->
-                                    backStack.add(Route.Edit(uri.toString(), date))
-                                }
-                            )
-                        }
-                    }
-
-                    is Route.Edit -> {
-                        NavEntry(key) {
-                            EditScreenRoute(
-                                videoUri = key.videoUri,
-                                date = key.date,
-                                navId = key.id,
-                                onBack = { backStack.removeLastOrNull() }
-                            )
-                        }
-                    }
-
-                    is Route.Glue -> {
-                        NavEntry(key) {
-                            GlueScreenRoute(
-                                monthQuery = key.monthQuery,
-                                year = key.year,
-                                onBack = { backStack.removeLastOrNull() }
-                            )
-                        }
-                    }
-
-                    else -> error("Unknown NavKey: $key")
+        AnimatedContent(
+            targetState = currentRoute,
+            transitionSpec = {
+                val tabOrder = listOf(
+                    Route.Montage::class,
+                    Route.Record::class,
+                    Route.Calendar::class
+                )
+                val initialIndex = tabOrder.indexOf(initialState::class)
+                val targetIndex = tabOrder.indexOf(targetState::class)
+                if (initialIndex != -1 && targetIndex != -1 && initialIndex != targetIndex) {
+                    val forward = targetIndex > initialIndex
+                    val enter =
+                        slideInHorizontally { offset -> if (forward) offset else -offset } + fadeIn()
+                    val exit =
+                        slideOutHorizontally { offset -> if (forward) -offset else offset } + fadeOut()
+                    enter togetherWith exit
+                } else {
+                    EnterTransition.None togetherWith ExitTransition.None
                 }
             },
-            transitionSpec = { EnterTransition.None togetherWith ExitTransition.None },
-            popTransitionSpec = { EnterTransition.None togetherWith ExitTransition.None }
-        )
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) { route ->
+            when (route) {
+                is Route.Record -> {
+                    RecordScreen(
+                        onVideoRecorded = { uri, date ->
+                            backStack.add(Route.Edit(uri.toString(), date))
+                        }
+                    )
+                }
+
+                is Route.Montage -> {
+                    MontageScreen(
+                        onNavigateToGlue = { month, year ->
+                            backStack.add(Route.Glue(monthQuery = month, year = year))
+                        }
+                    )
+                }
+
+                is Route.Calendar -> {
+                    CalendarScreen(
+                        onNavigateToRecord = {
+                            backStack.add(Route.Record)
+                        },
+                        onNavigateToEdit = { uri, date ->
+                            backStack.add(Route.Edit(uri.toString(), date))
+                        }
+                    )
+                }
+
+                is Route.Edit -> {
+                    EditScreenRoute(
+                        videoUri = route.videoUri,
+                        date = route.date,
+                        navId = route.id,
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+
+                is Route.Glue -> {
+                    GlueScreenRoute(
+                        monthQuery = route.monthQuery,
+                        year = route.year,
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+
+                else -> error("Unknown NavKey: $route")
+            }
+        }
     }
 }
