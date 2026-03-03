@@ -663,9 +663,20 @@ class GlueViewModel @OptIn(UnstableApi::class)
             }
 
             is GlueEvent.OnExportClicked -> {
+                stopPlayback()
                 doExport()
             }
         }
+    }
+
+    private fun stopPlayback() {
+        internalPlayer?.let {
+            if (it.isPlaying) it.pause()
+        }
+        musicPlayers.values.forEach {
+            if (it.isPlaying) it.pause()
+        }
+        _uiState.update { it.copy(isPlaying = false) }
     }
 
     private fun hasSpaceForNewAudio(tracks: List<AudioTrack>, totalDurationMs: Long): Boolean {
