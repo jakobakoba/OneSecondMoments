@@ -3,6 +3,12 @@
     <string name="montage_title">Montage</string>
     <string name="record_title">Record</string>
     <string name="calendar_title">Calendar</string>
+
+    <string name="edit_screen_title">Edit Video</string>
+    <string name="edit_screen_save_button">Save</string>
+    <string name="edit_screen_choose_the_moment">Choose the moment:</string>
+    <string name="edit_screen_play_selected_1_second">Play Selected 1 Second</string>
+
     <string name="timeline_header">Timeline</string>
     <string name="timeline_empty_message">Empty – Add music</string>
 </resources>
