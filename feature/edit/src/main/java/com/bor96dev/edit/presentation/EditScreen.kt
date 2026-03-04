@@ -89,7 +89,7 @@ fun EditScreen(
                 shape = RoundedCornerShape(24.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp)
             ) {
-                if(state.isSaving){
+                if (state.isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Text(
@@ -126,15 +126,25 @@ fun EditScreen(
                 )
             }
             if (state.dateText.isNotEmpty()) {
-                Text(
-                    text = state.dateText,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(8.dp)
-                )
+                ) {
+                    if (!state.locationText.isNullOrBlank()) {
+                        Text(
+                            text = state.locationText,
+                            color = Color.White,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Text(
+                        text = state.dateText,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

@@ -1,9 +1,20 @@
 package com.bor96dev.edit.presentation
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.location.Address
+import android.location.Geocoder
+import android.location.Geocoder.GeocodeListener
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
+import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.AbsoluteSizeSpan
@@ -11,6 +22,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -40,11 +52,13 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -128,7 +142,8 @@ class EditViewModel @UnstableApi
         inputUri: Uri,
         startMs: Long,
         endMs: Long,
-        dateText: String
+        dateText: String,
+        locationText: String?
     ): Uri =
         suspendCancellableCoroutine { continuation ->
             val outputFile = File(context.filesDir, "moment_${System.currentTimeMillis()}.mp4")
@@ -145,28 +160,7 @@ class EditViewModel @UnstableApi
                 .setClippingConfiguration(clippingConfiguration)
                 .build()
 
-            val overlayTextSpannable = SpannableString(dateText)
-
-            overlayTextSpannable.setSpan(
-                ForegroundColorSpan(Color.WHITE),
-                0,
-                overlayTextSpannable.length,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-
-            overlayTextSpannable.setSpan(
-                StyleSpan(Typeface.BOLD),
-                0,
-                overlayTextSpannable.length,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-
-            overlayTextSpannable.setSpan(
-                AbsoluteSizeSpan(70, true),
-                0,
-                overlayTextSpannable.length,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
+            val overlayTextSpannable = buildOverlayText(dateText, locationText)
 
             val settings = StaticOverlaySettings.Builder()
                 .setOverlayFrameAnchor(-1f, -1f)
@@ -202,6 +196,56 @@ class EditViewModel @UnstableApi
             transformer.start(editedMediaItem, outputFile.absolutePath)
             continuation.invokeOnCancellation { transformer.cancel() }
         }
+
+    private fun buildOverlayText(dateText: String, locationText: String?): SpannableString {
+        val fullText = if (locationText.isNullOrBlank()) {
+            dateText
+        } else {
+            "${locationText}\n$dateText"
+        }
+        val spannable = SpannableString(fullText)
+        spannable.setSpan(
+            ForegroundColorSpan(Color.WHITE),
+            0,
+            spannable.length,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+        )
+        if (locationText.isNullOrBlank()) {
+            spannable.setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                spannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            spannable.setSpan(
+                AbsoluteSizeSpan(70, true),
+                0,
+                spannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        } else {
+            val dateStart = locationText.length + 1
+            spannable.setSpan(
+                StyleSpan(Typeface.BOLD),
+                dateStart,
+                spannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            spannable.setSpan(
+                AbsoluteSizeSpan(56, true),
+                0,
+                locationText.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            spannable.setSpan(
+                AbsoluteSizeSpan(70, true),
+                dateStart,
+                spannable.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+        return spannable
+    }
 
     fun onEvent(event: EditEvent) {
         when (event) {
@@ -252,6 +296,12 @@ class EditViewModel @UnstableApi
                 player.play()
             }
 
+            is EditEvent.LocationPermissionResult -> {
+                if (event.granted) {
+                    loadLocation()
+                }
+            }
+
             is EditEvent.SaveClicked -> {
                 viewModelScope.launch {
                     _uiState.update { it.copy(isSaving = true) }
@@ -259,13 +309,20 @@ class EditViewModel @UnstableApi
                         val startMs = _uiState.value.selectedStartMs
                         val inputUri = _uiState.value.videoUri ?: return@launch
                         val outputUri =
-                            trimVideo(inputUri, startMs, startMs + 1000, _uiState.value.dateText)
+                            trimVideo(
+                                inputUri,
+                                startMs,
+                                startMs + 1000,
+                                _uiState.value.dateText,
+                                _uiState.value.locationText
+                            )
                         val dateString = date.toDateString()
 
                         editRepository.upsertMoment(
                             MomentEntity(
                                 date = dateString,
-                                videoUri = outputUri.toString()
+                                videoUri = outputUri.toString(),
+                                locationText = _uiState.value.locationText
                             )
                         )
                         _uiState.update { it.copy(isSaving = false, saveCompleted = true) }
@@ -277,6 +334,136 @@ class EditViewModel @UnstableApi
             }
 
             else -> Unit
+        }
+    }
+
+    private fun loadLocation() {
+        if (_uiState.value.locationText != null) return
+        viewModelScope.launch {
+            val location = getLocation() ?: return@launch
+            val locationText = resolveLocationText(location) ?: return@launch
+            _uiState.update { it.copy(locationText = locationText) }
+        }
+    }
+
+    private fun formatLocationText(city: String?, country: String?): String? {
+        val cleanCity = city?.trim().orEmpty()
+        val cleanCountry = country?.trim().orEmpty()
+        return when {
+            cleanCity.isNotEmpty() && cleanCountry.isNotEmpty() -> "$cleanCity / $cleanCountry"
+            cleanCity.isNotEmpty() -> cleanCity
+            cleanCountry.isNotEmpty() -> cleanCountry
+            else -> null
+        }
+    }
+
+    private fun hasLocationPermission(): Boolean {
+        val fine = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarse = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        return fine || coarse
+    }
+
+    @SuppressLint("MissingPermission")
+    private suspend fun getLocation(): Location? {
+        if (!hasLocationPermission()) return null
+        val locationManager =
+            context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val providers = listOf(
+            LocationManager.GPS_PROVIDER,
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.PASSIVE_PROVIDER
+        )
+        val lastKnown = providers.mapNotNull { provider ->
+            runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull()
+        }.maxByOrNull { it.time }
+        if (lastKnown != null) return lastKnown
+
+        val provider = when {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED -> LocationManager.GPS_PROVIDER
+
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) ==
+                    PackageManager.PERMISSION_GRANTED -> LocationManager.NETWORK_PROVIDER
+
+            else -> LocationManager.PASSIVE_PROVIDER
+        }
+
+        return suspendCancellableCoroutine { continuation ->
+            val listener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    locationManager.removeUpdates(this)
+                    continuation.resume(location)
+                }
+
+                override fun onProviderEnabled(provider: String) = Unit
+
+                override fun onProviderDisabled(provider: String) = Unit
+            }
+            try {
+                locationManager.requestLocationUpdates(
+                    provider,
+                    0L,
+                    0f,
+                    listener,
+                    Looper.getMainLooper()
+                )
+                continuation.invokeOnCancellation { locationManager.removeUpdates(listener) }
+            } catch (_: Exception) {
+                locationManager.removeUpdates(listener)
+                continuation.resume(null)
+            }
+        }
+    }
+
+    private suspend fun resolveLocationText(location: Location): String? {
+        return withContext(Dispatchers.IO) {
+            if (!Geocoder.isPresent()) return@withContext null
+            val geocoder = Geocoder(context, Locale.ENGLISH)
+            val addresses = getAddresses(geocoder, location.latitude, location.longitude)
+            val address = addresses?.firstOrNull() ?: return@withContext null
+            val city = address.locality ?: address.subAdminArea ?: address.adminArea
+            val country = address.countryName
+            formatLocationText(city, country)
+        }
+    }
+
+    private suspend fun getAddresses(
+        geocoder: Geocoder,
+        latitude: Double,
+        longitude: Double
+    ): List<Address>? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            suspendCancellableCoroutine { continuation ->
+                geocoder.getFromLocation(
+                    latitude,
+                    longitude,
+                    1,
+                    object : GeocodeListener {
+                        override fun onGeocode(addresses: MutableList<Address>) {
+                            if (continuation.isActive) {
+                                continuation.resume(addresses)
+                            }
+                        }
+
+                        override fun onError(errorMessage: String?) {
+                            if (continuation.isActive) {
+                                continuation.resume(null)
+                            }
+                        }
+                    }
+                )
+            }
+        } else {
+            null
         }
     }
 
