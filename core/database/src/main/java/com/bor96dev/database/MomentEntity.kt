@@ -7,4 +7,5 @@ import androidx.room.PrimaryKey
 data class MomentEntity (
     @PrimaryKey val date: String,
     val videoUri: String,
+    val locationText: String? = null,
 )
