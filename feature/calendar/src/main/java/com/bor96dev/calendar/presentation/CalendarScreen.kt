@@ -52,7 +52,7 @@ fun CalendarScreen(
             .fillMaxSize()
     ) {
         CalendarHeader(
-            month = state.selectedMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()),
+            month = state.selectedMonth.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH),
             year = state.selectedMonth.year,
             onPreviousMonth = { viewModel.onEvent(CalendarEvent.PreviousMonth) },
             onNextMonth = { viewModel.onEvent(CalendarEvent.NextMonth) }
