@@ -21,12 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bor96dev.database.MomentEntity
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
+import com.bor96dev.ui.R
 
 @Composable
 fun Timeline(
@@ -55,7 +57,7 @@ fun Timeline(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "Timeline",
+                text = stringResource(R.string.timeline_header),
                 color = Color.White,
                 fontWeight = FontWeight.Bold
             )
@@ -104,7 +106,7 @@ fun Timeline(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Пусто - Добавьте музыку",
+                                text = stringResource(R.string.timeline_empty_message),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp
                             )
