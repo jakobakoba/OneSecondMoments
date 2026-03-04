@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +58,7 @@ import com.bor96dev.database.MomentEntity
 import com.bor96dev.glue.presentation.composables.Timeline
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
+import com.bor96dev.ui.R
 
 private fun getFileName(context: Context, uri: Uri): String {
     context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -229,7 +231,7 @@ fun GlueScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Music Files",
+                text = stringResource(R.string.glue_music_files),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -285,7 +287,7 @@ fun GlueScreen(
                         IconButton(onClick = { onEvent(GlueEvent.OnAudioRemoved(track.id)) }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Remove track",
+                                contentDescription = stringResource(R.string.remove_track),
                                 tint = Color.White
                             )
                         }
@@ -309,7 +311,7 @@ fun GlueScreen(
                         tint = LocalContentColor.current
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = if (hasSpaceForNewAudio) "Add Music" else "No space left", color = LocalContentColor.current)
+                    Text(text = if (hasSpaceForNewAudio) stringResource(R.string.add_music) else stringResource(R.string.not_enough_space_music), color = LocalContentColor.current)
                 }
             }
         }
