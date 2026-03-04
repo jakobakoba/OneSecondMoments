@@ -346,17 +346,6 @@ class EditViewModel @UnstableApi
         }
     }
 
-    private fun formatLocationText(city: String?, country: String?): String? {
-        val cleanCity = city?.trim().orEmpty()
-        val cleanCountry = country?.trim().orEmpty()
-        return when {
-            cleanCity.isNotEmpty() && cleanCountry.isNotEmpty() -> "$cleanCity / $cleanCountry"
-            cleanCity.isNotEmpty() -> cleanCity
-            cleanCountry.isNotEmpty() -> cleanCountry
-            else -> null
-        }
-    }
-
     private fun hasLocationPermission(): Boolean {
         val fine = ContextCompat.checkSelfPermission(
             context,

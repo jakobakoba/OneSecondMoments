@@ -28,6 +28,10 @@ import com.bor96dev.glue.domain.GlueRepository
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
 import com.bor96dev.glue.presentation.state.GlueState
+import com.bor96dev.glue.presentation.timeline.clampedEndForGap
+import com.bor96dev.glue.presentation.timeline.findFirstGap
+import com.bor96dev.glue.presentation.timeline.hasSpaceForNewAudio
+import com.bor96dev.glue.presentation.timeline.toTrackRanges
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -43,8 +47,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Provider
-
-private const val MIN_AUDIO_DURATION_MS = 2000L
 
 @UnstableApi
 @HiltViewModel(assistedFactory = GlueViewModel.Factory::class)
@@ -157,7 +159,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 _uiState.update { state ->
                     state.copy(
                         hasSpaceForNewAudio = hasSpaceForNewAudio(
-                            state.audioTracks,
+                            state.audioTracks.toTrackRanges(),
                             state.totalDurationMs
                         )
                     )
@@ -321,61 +323,6 @@ class GlueViewModel @OptIn(UnstableApi::class)
         musicPlayers.forEach { (id, p) ->
             if (id !in activeTrackIds && p.isPlaying) p.pause()
         }
-    }
-
-    private fun findFirstGap(
-        existingTracks: List<AudioTrack>,
-        neededDurationMs: Long,
-        totalDurationMs: Long
-    ): Long {
-        val sorted = existingTracks.sortedBy { it.startInTimelineMs }
-
-        if (sorted.isEmpty()) return 0L
-        if (sorted.first().startInTimelineMs >= neededDurationMs) return 0L
-
-        for (i in 0 until sorted.size - 1) {
-            val gapStart = sorted[i].endInTimelineMs
-            val gapEnd = sorted[i + 1].startInTimelineMs
-            if (gapEnd - gapStart >= neededDurationMs) return gapStart
-        }
-
-        val lastEnd = sorted.last().endInTimelineMs
-        if (totalDurationMs - lastEnd >= neededDurationMs) return lastEnd
-
-        return findLargestGapStart(sorted, totalDurationMs)
-    }
-
-    private fun findLargestGapStart(sorted: List<AudioTrack>, totalDurationMs: Long): Long {
-        var bestStart = 0L
-        var bestSize = sorted.first().startInTimelineMs
-
-        for (i in 0 until sorted.size - 1) {
-            val gapStart = sorted[i].endInTimelineMs
-            val gapSize = sorted[i + 1].startInTimelineMs - gapStart
-            if (gapSize > bestSize) {
-                bestSize = gapSize
-                bestStart = gapStart
-            }
-        }
-
-        val afterLastSize = totalDurationMs - sorted.last().endInTimelineMs
-        if (afterLastSize > bestSize) {
-            bestStart = sorted.last().endInTimelineMs
-        }
-
-        return bestStart
-    }
-
-    private fun clampedEndForGap(
-        gapStart: Long,
-        existingTracks: List<AudioTrack>,
-        desiredEndMs: Long,
-        totalDurationMs: Long
-    ): Long {
-        val sorted = existingTracks.sortedBy { it.startInTimelineMs }
-        val nextTrackStart = sorted.filter { it.startInTimelineMs > gapStart }
-            .minOfOrNull { it.startInTimelineMs } ?: totalDurationMs
-        return minOf(desiredEndMs, nextTrackStart)
     }
 
     @OptIn(UnstableApi::class)
@@ -600,11 +547,12 @@ class GlueViewModel @OptIn(UnstableApi::class)
                     val state = _uiState.value
                     val totalDur = state.totalDurationMs
                     val clampedDuration = minOf(duration, totalDur)
+                    val trackRanges = state.audioTracks.toTrackRanges()
 
-                    val gapStart = findFirstGap(state.audioTracks, clampedDuration, totalDur)
+                    val gapStart = findFirstGap(trackRanges, clampedDuration, totalDur)
                     val desiredEnd = gapStart + clampedDuration
                     val actualEnd =
-                        clampedEndForGap(gapStart, state.audioTracks, desiredEnd, totalDur)
+                        clampedEndForGap(gapStart, trackRanges, desiredEnd, totalDur)
 
                     val newTrack = AudioTrack(
                         uri = event.uri,
@@ -624,7 +572,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         it.copy(
                             audioTracks = updatedTracks,
                             hasSpaceForNewAudio = hasSpaceForNewAudio(
-                                updatedTracks,
+                                updatedTracks.toTrackRanges(),
                                 it.totalDurationMs
                             )
                         )
@@ -639,7 +587,10 @@ class GlueViewModel @OptIn(UnstableApi::class)
                     val updatedTracks = it.audioTracks.filter { t -> t.id != event.trackId }
                     it.copy(
                         audioTracks = updatedTracks,
-                        hasSpaceForNewAudio = hasSpaceForNewAudio(updatedTracks, it.totalDurationMs)
+                        hasSpaceForNewAudio = hasSpaceForNewAudio(
+                            updatedTracks.toTrackRanges(),
+                            it.totalDurationMs
+                        )
                     )
                 }
             }
@@ -671,7 +622,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
                         state.copy(
                             audioTracks = updatedTracks,
                             hasSpaceForNewAudio = hasSpaceForNewAudio(
-                                updatedTracks,
+                                updatedTracks.toTrackRanges(),
                                 state.totalDurationMs
                             )
                         )
@@ -705,18 +656,6 @@ class GlueViewModel @OptIn(UnstableApi::class)
         context.startActivity(intent)
     }
 
-    private fun hasSpaceForNewAudio(tracks: List<AudioTrack>, totalDurationMs: Long): Boolean {
-        if (totalDurationMs <= 0) return false
-        val sorted = tracks.sortedBy { it.startInTimelineMs }
-        var prevEnd = 0L
-        for (track in sorted) {
-            if (track.startInTimelineMs - prevEnd >= MIN_AUDIO_DURATION_MS) {
-                return true
-            }
-            prevEnd = track.endInTimelineMs
-        }
-        return totalDurationMs - prevEnd >= MIN_AUDIO_DURATION_MS
-    }
 
     @OptIn(UnstableApi::class)
     override fun onCleared() {

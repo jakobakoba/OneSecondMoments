@@ -66,5 +66,11 @@ dependencies {
     implementation(libs.media3.effect)
     implementation(libs.media3.common)
 
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
 
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
