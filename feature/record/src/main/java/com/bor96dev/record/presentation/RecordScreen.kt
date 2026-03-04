@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -145,7 +146,7 @@ fun RecordScreen(
 
     Box(modifier = Modifier.fillMaxSize())
     {
-        if (state.hasPermissions) {
+        if (state.hasPermissions && (state.isLandscape || state.isRecording)) {
             val preview = state.videoPreview
             AndroidView(
                 factory = { ctx ->
@@ -158,7 +159,7 @@ fun RecordScreen(
             )
         }
 
-        if (!state.isLandscape) {
+        if (!state.isLandscape && !state.isRecording) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -226,7 +227,7 @@ fun RecordScreen(
                     .size(50.dp)
                     .align(Alignment.CenterEnd)
                     .background(
-                        Color.White.copy(alpha = 0.2f),
+                        LocalContentColor.current.copy(alpha = 0.2f),
                         RoundedCornerShape(12.dp)
                     )
                     .clickable {
@@ -237,7 +238,7 @@ fun RecordScreen(
                 Icon(
                     painter = painterResource(id = R.drawable.gallery),
                     contentDescription = null,
-                    tint = Color.White
+                    tint = LocalContentColor.current
                 )
             }
         }

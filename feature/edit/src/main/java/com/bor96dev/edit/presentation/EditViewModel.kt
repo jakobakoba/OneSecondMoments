@@ -89,7 +89,9 @@ class EditViewModel @UnstableApi
     private val _playerFlow = MutableStateFlow<Player?>(null)
     val playerFlow = _playerFlow.asStateFlow()
 
-    private var savedPositionMs: Long = 0L
+    companion object {
+        private const val PREVIEW_LENGTH_MS = 1000L
+    }
 
     init {
         val uri = videoUri.toUri()
@@ -100,7 +102,7 @@ class EditViewModel @UnstableApi
     fun onStart() {
         if (internalPlayer != null) return
         val player = playerBuilder.build().apply {
-            repeatMode = Player.REPEAT_MODE_OFF
+            repeatMode = Player.REPEAT_MODE_ONE
             setSeekParameters(SeekParameters.EXACT)
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -115,7 +117,6 @@ class EditViewModel @UnstableApi
 
     fun onStop() {
         internalPlayer?.let {
-            savedPositionMs = it.currentPosition
             it.stop()
             it.release()
         }
@@ -129,12 +130,34 @@ class EditViewModel @UnstableApi
                 if (playbackState == Player.STATE_READY) {
                     _uiState.update { it.copy(videoDurationMs = player.duration) }
                     player.removeListener(this)
+                    repeatClipAt(_uiState.value.selectedStartMs)
                 }
             }
         })
         player.setMediaItem(MediaItem.fromUri(uri))
         player.prepare()
-        if (savedPositionMs > 0) player.seekTo(savedPositionMs)
+    }
+
+    private fun repeatClipAt(startMs: Long) {
+        val player = internalPlayer ?: return
+        val uri = _uiState.value.videoUri ?: return
+        val maxStart = maxOf(0L, maxOf(_uiState.value.videoDurationMs, PREVIEW_LENGTH_MS) - PREVIEW_LENGTH_MS)
+        val clampedStart = startMs.coerceIn(0L, maxStart)
+        _uiState.update { it.copy(selectedStartMs = clampedStart) }
+
+        val clipping = MediaItem.ClippingConfiguration.Builder()
+            .setStartPositionMs(clampedStart)
+            .setEndPositionMs(clampedStart + PREVIEW_LENGTH_MS)
+            .build()
+
+        val mediaItem = MediaItem.Builder()
+            .setUri(uri)
+            .setClippingConfiguration(clipping)
+            .build()
+
+        player.setMediaItem(mediaItem)
+        player.playWhenReady = true
+        player.prepare()
     }
 
     @OptIn(UnstableApi::class)
@@ -250,50 +273,7 @@ class EditViewModel @UnstableApi
     fun onEvent(event: EditEvent) {
         when (event) {
             is EditEvent.OnSeekChanged -> {
-                _uiState.update { it.copy(selectedStartMs = event.positionMs) }
-
-                val player = internalPlayer ?: return
-                val uri = _uiState.value.videoUri ?: return
-                val currentMediaItem = player.currentMediaItem
-                val isClipped = currentMediaItem?.clippingConfiguration?.endPositionMs
-                    ?.let { it != androidx.media3.common.C.TIME_END_OF_SOURCE } ?: false
-
-                if (isClipped) {
-                    player.addListener(object : Player.Listener {
-                        override fun onPlaybackStateChanged(playbackState: Int) {
-                            if (playbackState == Player.STATE_READY) {
-                                player.pause()
-                                player.seekTo(event.positionMs)
-                                player.removeListener(this)
-                            }
-                        }
-                    })
-                    player.setMediaItem(MediaItem.fromUri(uri))
-                    player.prepare()
-                } else {
-                    player.pause()
-                    player.seekTo(event.positionMs)
-                }
-            }
-
-            is EditEvent.TogglePlay -> {
-                val player = internalPlayer ?: return
-                val uri = _uiState.value.videoUri ?: return
-                val startMs = _uiState.value.selectedStartMs
-
-                val clipping = MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(startMs)
-                    .setEndPositionMs(startMs + 1000)
-                    .build()
-
-                val mediaItem = MediaItem.Builder()
-                    .setUri(uri)
-                    .setClippingConfiguration(clipping)
-                    .build()
-
-                player.setMediaItem(mediaItem)
-                player.prepare()
-                player.play()
+                repeatClipAt(event.positionMs)
             }
 
             is EditEvent.LocationPermissionResult -> {
