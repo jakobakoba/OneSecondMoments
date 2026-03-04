@@ -5,8 +5,6 @@ fun formatLocationText(city: String?, country: String?): String? {
     val cleanCountry = country?.trim().orEmpty()
     return when {
         cleanCity.isNotEmpty() && cleanCountry.isNotEmpty() -> "$cleanCity / $cleanCountry"
-        cleanCity.isNotEmpty() -> cleanCity
-        cleanCountry.isNotEmpty() -> cleanCountry
         else -> null
     }
 }
