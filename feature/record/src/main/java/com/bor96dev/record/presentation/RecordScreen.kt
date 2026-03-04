@@ -145,7 +145,7 @@ fun RecordScreen(
 
     Box(modifier = Modifier.fillMaxSize())
     {
-        if (state.hasPermissions) {
+        if (state.hasPermissions && (state.isLandscape || state.isRecording)) {
             val preview = state.videoPreview
             AndroidView(
                 factory = { ctx ->
@@ -158,7 +158,7 @@ fun RecordScreen(
             )
         }
 
-        if (!state.isLandscape) {
+        if (!state.isLandscape && !state.isRecording) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
