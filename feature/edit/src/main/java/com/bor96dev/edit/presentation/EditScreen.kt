@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
+import com.bor96dev.ui.R
 import kotlin.math.roundToInt
 
 @OptIn(UnstableApi::class)
@@ -79,7 +81,7 @@ fun EditScreen(
                 )
             }
             Text(
-                text = "Edit Video",
+                text = stringResource(R.string.edit_screen_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -93,7 +95,7 @@ fun EditScreen(
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Text(
-                        text = "Save",
+                        text = stringResource(R.string.edit_screen_save_button),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -165,7 +167,7 @@ fun EditScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Choose the moment: ",
+                text = stringResource(R.string.edit_screen_choose_the_moment),
                 fontSize = 14.sp
             )
 
@@ -225,7 +227,7 @@ fun EditScreen(
                     Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Play Selected 1 Second",
+                        text = stringResource(R.string.edit_screen_play_selected_1_second),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )

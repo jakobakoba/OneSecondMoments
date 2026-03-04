@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,6 +102,7 @@ fun RecordScreen(
                         viewModel.bindCamera(lifecycleOwner)
                     }
                 }
+
                 Lifecycle.Event.ON_STOP -> viewModel.onStop()
                 else -> Unit
             }
@@ -175,7 +177,7 @@ fun RecordScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Rotate to Landscape",
+                        text = stringResource(R.string.record_screen_rotate_to_landscape),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Red

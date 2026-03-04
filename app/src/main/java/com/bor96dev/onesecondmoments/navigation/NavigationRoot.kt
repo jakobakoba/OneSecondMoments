@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.savedstate.serialization.SavedStateConfiguration
@@ -68,7 +69,7 @@ fun NavigationRoot(
                             contentDescription = null
                         )
                     },
-                    label = { Text("Montage") }
+                    label = { Text(stringResource(R.string.montage_title)) }
                 )
 
                 NavigationBarItem(
@@ -85,7 +86,7 @@ fun NavigationRoot(
                             contentDescription = null
                         )
                     },
-                    label = { Text("Record") }
+                    label = { Text(stringResource(R.string.record_title)) }
                 )
 
                 NavigationBarItem(
@@ -102,7 +103,7 @@ fun NavigationRoot(
                             contentDescription = null
                         )
                     },
-                    label = { Text("Calendar") }
+                    label = { Text(stringResource(R.string.calendar_title)) }
                 )
             }
         }
