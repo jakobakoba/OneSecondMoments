@@ -9,6 +9,8 @@
     <string name="edit_screen_choose_the_moment">Choose the moment:</string>
     <string name="edit_screen_play_selected_1_second">Play Selected 1 Second</string>
 
+    <string name="record_screen_rotate_to_landscape">Rotate to Landscape</string>
+
     <string name="glue_music_files">Music Files</string>
     <string name="remove_track">Remove track</string>
     <string name="add_music">Add music track</string>
