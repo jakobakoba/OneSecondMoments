@@ -42,7 +42,7 @@ import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import com.bor96dev.edit.domain.EditRepository
 import com.bor96dev.edit.presentation.event.EditEvent
 import com.bor96dev.edit.presentation.state.EditState
@@ -299,7 +299,7 @@ class EditViewModel @UnstableApi
                         val dateString = date.toDateString()
 
                         editRepository.upsertMoment(
-                            MomentEntity(
+                            Moment(
                                 date = dateString,
                                 videoUri = outputUri.toString(),
                                 locationText = _uiState.value.locationText

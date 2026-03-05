@@ -1,15 +1,15 @@
 package com.bor96dev.calendar.presentation.state
 
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import java.time.LocalDate
 import java.time.YearMonth
 
 data class CalendarState (
     val selectedMonth: YearMonth = YearMonth.now(),
     val days: List<CalendarDay> = emptyList(),
-    val moments: Map<String, MomentEntity> = emptyMap(),
+    val moments: Map<String, Moment> = emptyMap(),
     val selectedDay: LocalDate? = LocalDate.now(),
-    val selectedMoment: MomentEntity? = null,
+    val selectedMoment: Moment? = null,
     val isLoading: Boolean = false
 )
 

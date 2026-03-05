@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import com.bor96dev.glue.presentation.composables.Timeline
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
@@ -75,7 +75,7 @@ fun GlueScreen(
     title: String,
     totalDurationMs: Long,
     currentTimeProvider: () -> Long,
-    videoMoments: List<MomentEntity>,
+    videoMoments: List<Moment>,
     audioTracks: List<AudioTrack>,
     player: Player?,
     isPlaying: Boolean,

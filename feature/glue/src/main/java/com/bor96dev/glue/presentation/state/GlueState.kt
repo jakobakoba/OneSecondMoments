@@ -1,12 +1,12 @@
 package com.bor96dev.glue.presentation.state
 
 import android.net.Uri
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import java.util.UUID
 
 data class GlueState(
     val title: String = "",
-    val videoMoments: List<MomentEntity> = emptyList(),
+    val videoMoments: List<Moment> = emptyList(),
     val audioTracks: List<AudioTrack> = emptyList(),
     val totalDurationMs: Long = 0L,
     val isPlaying: Boolean = false,

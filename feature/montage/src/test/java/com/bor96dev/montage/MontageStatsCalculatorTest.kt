@@ -1,6 +1,6 @@
 package com.bor96dev.montage
 
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import com.bor96dev.montage.presentation.state.MonthStat
 import com.bor96dev.montage.presentation.state.YearStat
 import com.bor96dev.montage.presentation.stats.MontageStatsCalculator
@@ -12,9 +12,9 @@ import java.time.YearMonth
 class MontageStatsCalculatorTest : StringSpec({
     "показ по годам от новых к старым" {
         val moments = listOf(
-            MomentEntity("2022-04-01", "uri", "geo"),
-            MomentEntity("2023-05-20", "uri", "geo"),
-            MomentEntity("2022-12-31", "uri", "geo")
+            Moment("2022-04-01", "uri", "geo"),
+            Moment("2023-05-20", "uri", "geo"),
+            Moment("2022-12-31", "uri", "geo")
         )
 
         val stats = MontageStatsCalculator.computeYearlyStats(moments)
@@ -28,10 +28,10 @@ class MontageStatsCalculatorTest : StringSpec({
     "показ по месяцам и году от новых к старым" {
         val stats = MontageStatsCalculator.computeMonthlyStats(
             listOf(
-                MomentEntity("2023-05-01", "uri", "geo"),
-                MomentEntity("2023-04-10", "uri", "geo"),
-                MomentEntity("2022-06-12", "uri", "geo"),
-                MomentEntity("2022-06-22", "uri", "geo")
+                Moment("2023-05-01", "uri", "geo"),
+                Moment("2023-04-10", "uri", "geo"),
+                Moment("2022-06-12", "uri", "geo"),
+                Moment("2022-06-22", "uri", "geo")
             )
         )
 
