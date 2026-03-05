@@ -194,7 +194,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
         val composition = Composition.Builder(listOf(sequence)).build()
 
-        premergeTransformer = Transformer.Builder(context)
+        val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     premergedVideoPath = cacheFile.absolutePath
@@ -226,8 +226,9 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 }
             })
             .build()
+        premergeTransformer = transformer
 
-        premergeTransformer!!.start(composition, cacheFile.absolutePath)
+        transformer.start(composition, cacheFile.absolutePath)
 
         premergeProgressJob?.cancel()
         premergeProgressJob = viewModelScope.launch(Dispatchers.Main) {
@@ -410,7 +411,7 @@ class GlueViewModel @OptIn(UnstableApi::class)
 
         val composition = Composition.Builder(sequences).build()
 
-        exportTransformer = Transformer.Builder(context)
+        val transformer = Transformer.Builder(context)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
                     viewModelScope.launch {
@@ -445,8 +446,9 @@ class GlueViewModel @OptIn(UnstableApi::class)
                 }
             })
             .build()
+        exportTransformer = transformer
 
-        exportTransformer!!.start(composition, outputFile.absolutePath)
+        transformer.start(composition, outputFile.absolutePath)
 
         exportProgressJob?.cancel()
         exportProgressJob = viewModelScope.launch(Dispatchers.Main) {
