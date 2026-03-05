@@ -95,7 +95,7 @@ fun RecordScreen(
         }
     }
 
-    DisposableEffect(lifecycleOwner, state.hasPermissions, cameraManager, preview) {
+    DisposableEffect(lifecycleOwner, state.hasPermissions) {
         if (!state.hasPermissions) return@DisposableEffect onDispose {}
 
         val lifecycle = lifecycleOwner.lifecycle
