@@ -7,6 +7,7 @@ import android.view.OrientationEventListener
 import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,12 +43,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.bor96dev.record.domain.CameraManager
 import com.bor96dev.record.presentation.event.RecordEvent
 import com.bor96dev.ui.R
+import kotlinx.coroutines.launch
 
 private val REQUIRED_PERMISSIONS = arrayOf(
     Manifest.permission.CAMERA,
@@ -56,11 +61,13 @@ private val REQUIRED_PERMISSIONS = arrayOf(
 @Composable
 fun RecordScreen(
     onVideoRecorded: (Uri, Long) -> Unit,
+    cameraManager: CameraManager,
     viewModel: RecordViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val preview = remember { Preview.Builder().build() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -88,21 +95,38 @@ fun RecordScreen(
         }
     }
 
-    DisposableEffect(lifecycleOwner, state.hasPermissions) {
+    DisposableEffect(lifecycleOwner, state.hasPermissions, cameraManager, preview) {
         if (!state.hasPermissions) return@DisposableEffect onDispose {}
 
         val lifecycle = lifecycleOwner.lifecycle
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> viewModel.bindCamera(lifecycleOwner)
-                Lifecycle.Event.ON_STOP -> viewModel.onStop()
+                Lifecycle.Event.ON_START -> {
+                    lifecycleOwner.lifecycleScope.launch {
+                        cameraManager.bindToLifecycle(lifecycleOwner, preview)
+                    }
+                }
+                Lifecycle.Event.ON_STOP -> {
+                    cameraManager.stopRecording()
+                    lifecycleOwner.lifecycleScope.launch {
+                        cameraManager.unbind()
+                    }
+                }
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            lifecycleOwner.lifecycleScope.launch {
+                cameraManager.bindToLifecycle(lifecycleOwner, preview)
+            }
+        }
         onDispose {
             lifecycle.removeObserver(observer)
-            viewModel.onStop()
+            cameraManager.stopRecording()
+            lifecycleOwner.lifecycleScope.launch {
+                cameraManager.unbind()
+            }
         }
     }
 
@@ -138,12 +162,11 @@ fun RecordScreen(
     Box(modifier = Modifier.fillMaxSize())
     {
         if (state.hasPermissions) {
-            val preview = state.videoPreview
             AndroidView(
                 factory = { ctx ->
                     PreviewView(ctx).apply {
                         scaleType = PreviewView.ScaleType.FILL_CENTER
-                        preview?.setSurfaceProvider(surfaceProvider)
+                        preview.setSurfaceProvider(surfaceProvider)
                     }
                 },
                 modifier = Modifier.fillMaxSize()
