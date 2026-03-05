@@ -68,11 +68,16 @@ fun RecordScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val preview = remember { Preview.Builder().build() }
+    val hasAllPermissions = {
+        REQUIRED_PERMISSIONS.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
+    ) { _ ->
+        val allGranted = hasAllPermissions()
         viewModel.onEvent(RecordEvent.PermissionResult(granted = allGranted))
     }
 
@@ -92,6 +97,18 @@ fun RecordScreen(
             permissionLauncher.launch(needsPermissions.toTypedArray())
         } else {
             viewModel.onEvent(RecordEvent.PermissionResult(granted = true))
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                viewModel.onEvent(RecordEvent.PermissionResult(granted = hasAllPermissions()))
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
