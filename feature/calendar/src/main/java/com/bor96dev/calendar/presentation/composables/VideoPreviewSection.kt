@@ -157,18 +157,17 @@ fun VideoPreviewSection(
                     fontSize = 16.sp
                 )
 
-                IconButton(
-                    onClick = onReplace,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null
-                    )
-                }
-
                 if (moment != null){
+                    IconButton(
+                        onClick = onReplace,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     IconButton(
                         onClick = onDelete,
