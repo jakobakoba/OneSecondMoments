@@ -59,6 +59,11 @@ class GlueViewModel @OptIn(UnstableApi::class)
     private val playerBuilderProvider: Provider<ExoPlayer.Builder>
 ) : ViewModel() {
 
+    @AssistedFactory
+    interface Factory {
+        fun create(monthQuery: String?, year: Int?): GlueViewModel
+    }
+
     private val _uiState = MutableStateFlow(GlueState())
     val uiState = _uiState.asStateFlow()
 
@@ -666,10 +671,5 @@ class GlueViewModel @OptIn(UnstableApi::class)
         exportTransformer?.cancel()
         premergedVideoPath?.let { File(it).delete() }
         super.onCleared()
-    }
-
-    @AssistedFactory
-    interface Factory {
-        fun create(monthQuery: String?, year: Int?): GlueViewModel
     }
 }
