@@ -37,13 +37,14 @@ class CalendarViewModel @Inject constructor(
         _selectedDay,
         _moments
     ) {month, selectedDay, momentsList ->
-        val momentsMap = momentsList.associateBy {it.date}
+        val momentsMap = momentsList.associateBy { it.date }
+        val daysWithVideo = momentsMap.keys
         CalendarState(
             selectedMonth = month,
             selectedDay = selectedDay,
             moments = momentsMap,
-            days = generateDays(month, momentsMap),
-            selectedMoment = selectedDay?.let {momentsMap[it.toString()]}
+            days = generateDays(month, daysWithVideo),
+            selectedMoment = selectedDay?.let { momentsMap[it.toString()] }
         )
     }.stateIn(
         scope = viewModelScope,
@@ -75,22 +76,22 @@ class CalendarViewModel @Inject constructor(
 
 
 
-    private fun generateDays(month: YearMonth, momentsMap: Map<String, Any>): List<CalendarDay>{
+    private fun generateDays(month: YearMonth, daysWithVideo: Set<String>): List<CalendarDay> {
         val daysInMonth = month.lengthOfMonth()
-        val firstDayOfMonth = month.atDay(1).dayOfWeek.value % 7
+        val firstDayOfMonth = month.atDay(1).dayOfWeek.value - 1
         val totalCells = ((daysInMonth + firstDayOfMonth + 6) / 7 ) * 7
 
         val today = LocalDate.now()
 
-        return List(totalCells){index ->
+        return List(totalCells) { index ->
             val dayNumber = index - firstDayOfMonth + 1
-            if (dayNumber in 1 .. daysInMonth){
+            if (dayNumber in 1..daysInMonth) {
                 val date = month.atDay(dayNumber)
                 CalendarDay(
                     date = date,
                     isToday = date == today,
                     isFuture = date.isAfter(today),
-                    hasVideo = momentsMap.containsKey(date.toString())
+                    hasVideo = date.toString() in daysWithVideo
                 )
             } else {
                 CalendarDay(date = null)

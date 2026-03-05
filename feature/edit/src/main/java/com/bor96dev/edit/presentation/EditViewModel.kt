@@ -432,7 +432,7 @@ class EditViewModel @UnstableApi
                 )
             }
         } else {
-            null
+            geocoder.getFromLocation(latitude, longitude, 1)
         }
     }
 

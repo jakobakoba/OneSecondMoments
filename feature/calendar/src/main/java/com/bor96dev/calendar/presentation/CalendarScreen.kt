@@ -63,6 +63,7 @@ fun CalendarScreen(
             selectedDate = state.selectedDay,
             onDelete = { viewModel.onEvent(CalendarEvent.DeleteSelectedMoment) },
             onReplace = {
+                viewModel.onEvent(CalendarEvent.DeleteSelectedMoment)
                 if (state.selectedDay == LocalDate.now()) {
                     onNavigateToRecord()
                 } else {
