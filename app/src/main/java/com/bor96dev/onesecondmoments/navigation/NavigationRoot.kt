@@ -26,6 +26,7 @@ import com.bor96dev.calendar.presentation.CalendarScreen
 import com.bor96dev.edit.presentation.EditScreenRoute
 import com.bor96dev.glue.presentation.GlueScreenRoute
 import com.bor96dev.montage.MontageScreen
+import com.bor96dev.record.domain.CameraManager
 import com.bor96dev.record.presentation.RecordScreen
 import com.bor96dev.ui.R
 import kotlinx.serialization.modules.SerializersModule
@@ -33,7 +34,8 @@ import kotlinx.serialization.modules.polymorphic
 
 @Composable
 fun NavigationRoot(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cameraManager: CameraManager
 ) {
     val backStack = rememberNavBackStack(
         configuration = SavedStateConfiguration {
@@ -138,6 +140,7 @@ fun NavigationRoot(
             when (route) {
                 is Route.Record -> {
                     RecordScreen(
+                        cameraManager = cameraManager,
                         onVideoRecorded = { uri, date ->
                             backStack.add(Route.Edit(uri.toString(), date))
                         }

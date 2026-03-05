@@ -1,7 +1,5 @@
 package com.bor96dev.record.presentation
 
-import androidx.camera.core.Preview
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bor96dev.record.domain.CameraManager
@@ -29,9 +27,6 @@ class RecordViewModel @Inject constructor(
     private var recordingStartDate: Long? = null
 
     init {
-        val preview = Preview.Builder().build()
-        _uiState.update { it.copy(videoPreview = preview) }
-
         viewModelScope.launch {
             cameraManager.results.collect { result ->
                 when (result) {
@@ -41,7 +36,9 @@ class RecordViewModel @Inject constructor(
                             it.copy(
                                 lastRecordedUri = result.uri,
                                 recordedDate = date,
-                                isProcessing = true
+                                isProcessing = true,
+                                isRecording = false,
+                                canStop = false
                             )
                         }
                     }
@@ -51,7 +48,8 @@ class RecordViewModel @Inject constructor(
                             it.copy(
                                 isProcessing = false,
                                 isRecording = false,
-                                error = result.message
+                                error = result.message,
+                                canStop = false
                             )
                         }
                     }
@@ -135,20 +133,6 @@ class RecordViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
-
-    fun bindCamera(lifecycleOwner: LifecycleOwner) {
-        viewModelScope.launch {
-            val preview = _uiState.value.videoPreview ?: return@launch
-            cameraManager.bindToLifecycle(lifecycleOwner, preview)
-        }
-    }
-
-    fun onStop() {
-        cameraManager.stopRecording()
-        viewModelScope.launch {
-            cameraManager.unbind()
         }
     }
 }
