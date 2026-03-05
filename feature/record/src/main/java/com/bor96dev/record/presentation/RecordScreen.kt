@@ -88,22 +88,13 @@ fun RecordScreen(
         }
     }
 
-    LaunchedEffect(state.hasPermissions) {
-        if (state.hasPermissions) {
-            viewModel.bindCamera(lifecycleOwner)
-        }
-    }
-
     DisposableEffect(lifecycleOwner, state.hasPermissions) {
+        if (!state.hasPermissions) return@DisposableEffect onDispose {}
+
         val lifecycle = lifecycleOwner.lifecycle
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> {
-                    if (state.hasPermissions) {
-                        viewModel.bindCamera(lifecycleOwner)
-                    }
-                }
-
+                Lifecycle.Event.ON_START -> viewModel.bindCamera(lifecycleOwner)
                 Lifecycle.Event.ON_STOP -> viewModel.onStop()
                 else -> Unit
             }
