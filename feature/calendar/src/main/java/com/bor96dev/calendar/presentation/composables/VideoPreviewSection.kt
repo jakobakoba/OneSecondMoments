@@ -41,12 +41,12 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import java.time.LocalDate
 
 @Composable
 fun VideoPreviewSection(
-    moment: MomentEntity?,
+    moment: Moment?,
     selectedDate: LocalDate?,
     onDelete: () -> Unit,
     onReplace: () -> Unit

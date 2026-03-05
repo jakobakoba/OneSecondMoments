@@ -25,7 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bor96dev.database.MomentEntity
+import com.bor96dev.database.Moment
 import com.bor96dev.glue.presentation.event.GlueEvent
 import com.bor96dev.glue.presentation.state.AudioTrack
 import com.bor96dev.ui.R
@@ -34,7 +34,7 @@ import com.bor96dev.ui.R
 fun Timeline(
     currentTimeProvider: () -> Long,
     totalDurationMs: Long,
-    videoMoments: List<MomentEntity>,
+    videoMoments: List<Moment>,
     audioTracks: List<AudioTrack>,
     onSeek: (Long) -> Unit,
     onEvent: (GlueEvent) -> Unit,
